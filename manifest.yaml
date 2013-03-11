@@ -1,0 +1,4 @@
+id: varnish
+endpoint:
+    production: set.me
+    test: localhost:8000
