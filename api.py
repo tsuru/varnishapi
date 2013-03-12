@@ -34,7 +34,7 @@ def _store_instance_and_app(reservations, app_name):
 
 
 def _get_database_name():
-    if os.environ.get("DB_PATH"): # this env var should be an absolute path
+    if os.environ.get("DB_PATH"): # this env var must be an absolute path
         return os.environ["DB_PATH"]
     return os.path.realpath(os.path.join(__file__, "../", default_db_name))
 
