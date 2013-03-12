@@ -17,6 +17,36 @@ def create_instance():
     return "", 201
 
 
+@api.route("/resources/<name>", methods=["DELETE"])
+def delete_instance(name):
+    instance_id = _instance_id_by_service_instance_name(name)
+    _delete_ec2_instance(instance_id=instance_id)
+    _delete_from_database(name)
+    return "", 200
+
+
+def _delete_from_database(name):
+    c = conn.cursor()
+    c.execute("delete from instance_app where app_name=?", [name])
+    conn.commit()
+
+
+def _instance_id_by_service_instance_name(name):
+    c = conn.cursor()
+    query = "select instance_id from instance_app where app_name=? limit 1"
+    c.execute(query, [name])
+    result = c.fetchall()
+    if len(result) == 0 or len(result[0]) == 0:
+        return ""
+    return result[0][0]
+
+
+def _delete_ec2_instance(instance_id):
+    from boto.ec2.connection import EC2Connection
+    conn = EC2Connection(access_key, secret_key)
+    return conn.terminate_instances(instance_ids=[instance_id])
+
+
 def _create_ec2_instance():
     from boto.ec2.connection import EC2Connection
     conn = EC2Connection(access_key, secret_key)

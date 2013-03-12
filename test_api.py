@@ -41,9 +41,10 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        os.environ["ACCESS_KEY"] = ""
-        os.environ["SECRET_KEY"] = ""
-        os.environ["AMI_ID"] = ""
+        del os.environ["ACCESS_KEY"]
+        del os.environ["SECRET_KEY"]
+        del os.environ["AMI_ID"]
+        del os.environ["SUBNET_ID"]
         DatabaseTest.tearDownClass()
 
     def fake_reservation(self):
@@ -90,7 +91,48 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
 
 class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
 
-    pass
+    @classmethod
+    def setUpClass(cls):
+        cls.api = api.api.test_client()
+        os.environ["ACCESS_KEY"] = "access"
+        os.environ["SECRET_KEY"] = "secret"
+        reload(api)
+        DatabaseTest.setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        del os.environ["ACCESS_KEY"]
+        del os.environ["SECRET_KEY"]
+        DatabaseTest.tearDownClass()
+
+    def tearDown(self):
+        c = api.conn.cursor()
+        c.execute("delete from instance_app;")
+
+    @patch("boto.ec2.connection.EC2Connection")
+    @patch("api._instance_id_by_service_instance_name")
+    def test_should_get_and_be_success(self, mock, ec2_mock):
+        mock.return_value = ["i-1"]
+        r = self.api.delete("/resources/service_instance_name")
+        self.assertEqual(200, r.status_code)
+
+    @patch("boto.ec2.connection.EC2Connection")
+    def test_should_call_ec2_terminate_instances(self, mock):
+        instance = mock.return_value
+        instance.terminate_instances.return_value = ["i-1"]
+        c = api.conn.cursor()
+        c.execute("insert into instance_app values ('i-1', 'si_name')")
+        self.api.delete("/resources/si_name")
+        instance.terminate_instances.assert_called_once_with(instance_ids=["i-1"])
+
+    @patch("boto.ec2.connection.EC2Connection")
+    def test_should_remove_record_from_the_database(self, mock):
+        c = api.conn.cursor()
+        c.execute("insert into instance_app values ('i-1', 'si_name')")
+        self.api.delete("/resources/si_name")
+        c.execute("select * from instance_app where app_name='si_name'")
+        results = c.fetchall()
+        self.assertListEqual([], results)
 
 
 class HelpersTestcase(unittest.TestCase):
