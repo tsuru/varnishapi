@@ -1,6 +1,5 @@
 import api
 import os
-import sqlite3
 import unittest
 from mock import patch
 from collections import namedtuple
@@ -10,17 +9,18 @@ class DatabaseTest(object):
 
     @classmethod
     def setUpClass(cls):
+        os.environ["DB_PATH"] = ":memory:"
         sql_path = os.path.realpath(os.path.join(__file__, "../database.sql"))
         f = open(sql_path)
         sql = f.read().replace("\n", "")
-        cls.conn = sqlite3.connect(api._get_database_name())
-        c = cls.conn.cursor()
+        c = api.conn.cursor()
         c.execute(sql)
-        cls.conn.commit()
 
     @classmethod
     def tearDownClass(cls):
-        cls.conn.close()
+        c = api.conn.cursor()
+        c.execute("drop table instance_app;")
+        api.conn.close()
 
 
 class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
@@ -36,9 +36,8 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
         DatabaseTest.setUpClass()
 
     def tearDown(self):
-        c = self.conn.cursor()
+        c = api.conn.cursor()
         c.execute("delete from instance_app;")
-        self.conn.commit()
 
     @classmethod
     def tearDownClass(cls):
@@ -82,7 +81,7 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
         r = self.fake_reservation()
         instance.run_instances.return_value = [r]
         self.api.post("/resources", data={"name": "someapp"})
-        c = self.conn.cursor()
+        c = api.conn.cursor()
         c.execute("select * from instance_app;")
         result = c.fetchall()
         expected = [("i-1", "someapp")]
@@ -97,16 +96,17 @@ class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
 class HelpersTestcase(unittest.TestCase):
 
     def test_get_database_name_should_return_absolute_path_to_it(self):
+        del os.environ["DB_PATH"]
         db_name = api._get_database_name()
         expected = os.path.realpath(os.path.join(__file__, "../", api.default_db_name))
         self.assertEqual(expected, db_name)
 
     def test_get_database_name_should_use_DB_PATH_env_var_when_its_set(self):
-        os.environ["DB_PATH"] = "/home/user/"
+        os.environ["DB_PATH"] = ":memory:"
+        reload(api)
         got = api._get_database_name()
-        expected = "/home/user/{0}".format(api.default_db_name)
+        self.assertEqual(os.environ["DB_PATH"], got)
         del os.environ["DB_PATH"]
-        self.assertEqual(expected, got)
 
 
 

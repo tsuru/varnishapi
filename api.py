@@ -24,7 +24,6 @@ def _create_ec2_instance():
 
 
 def _store_instance_and_app(reservations, app_name):
-    conn = sqlite3.connect(_get_database_name())
     instance_apps = []
     for r in reservations:
         for i in r.instances:
@@ -35,9 +34,11 @@ def _store_instance_and_app(reservations, app_name):
 
 
 def _get_database_name():
-    if os.environ.get("DB_PATH"):
-        return os.path.join(os.environ["DB_PATH"], default_db_name)
+    if os.environ.get("DB_PATH"): # this env var should be an absolute path
+        return os.environ["DB_PATH"]
     return os.path.realpath(os.path.join(__file__, "../", default_db_name))
 
+
+conn = sqlite3.connect(_get_database_name())
 if __name__ == "__main__":
     api.run()
