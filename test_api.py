@@ -13,31 +13,32 @@ class DatabaseTest(object):
         sql_path = os.path.realpath(os.path.join(__file__, "../database.sql"))
         f = open(sql_path)
         sql = f.read().replace("\n", "")
-        conn = sqlite3.connect(api._get_database_name())
-        c = conn.cursor()
+        cls.conn = sqlite3.connect(api._get_database_name())
+        c = cls.conn.cursor()
         c.execute(sql)
-        conn.commit()
+        cls.conn.commit()
 
     @classmethod
     def tearDownClass(cls):
-        os.remove(api._get_database_name())
+        cls.conn.close()
 
 
 class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
 
-    def setUp(self):
-        self.api = api.api.test_client()
+    @classmethod
+    def setUpClass(cls):
+        cls.api = api.api.test_client()
         os.environ["ACCESS_KEY"] = "access"
         os.environ["SECRET_KEY"] = "secret"
         os.environ["AMI_ID"] = "ami-123"
         os.environ["SUBNET_ID"] = "subnet-123"
         reload(api)
+        DatabaseTest.setUpClass()
 
     def tearDown(self):
-        conn = sqlite3.connect(api._get_database_name())
-        c = conn.cursor()
+        c = self.conn.cursor()
         c.execute("delete from instance_app;")
-        conn.commit()
+        self.conn.commit()
 
     @classmethod
     def tearDownClass(cls):
@@ -81,12 +82,16 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
         r = self.fake_reservation()
         instance.run_instances.return_value = [r]
         self.api.post("/resources", data={"name": "someapp"})
-        conn = sqlite3.connect(api._get_database_name())
-        c = conn.cursor()
+        c = self.conn.cursor()
         c.execute("select * from instance_app;")
         result = c.fetchall()
         expected = [("i-1", "someapp")]
         self.assertListEqual(expected, result)
+
+
+class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
+
+    pass
 
 
 class HelpersTestcase(unittest.TestCase):
