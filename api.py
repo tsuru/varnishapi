@@ -19,7 +19,7 @@ def create_instance():
 
 @api.route("/resources/<name>", methods=["DELETE"])
 def delete_instance(name):
-    instance_id = _instance_id_by_service_instance_name(name)
+    instance_id = _get_instance_id(service_instance=name)
     _delete_ec2_instance(instance_id=instance_id)
     _delete_from_database(name)
     return "", 200
@@ -31,10 +31,10 @@ def _delete_from_database(name):
     conn.commit()
 
 
-def _instance_id_by_service_instance_name(name):
+def _get_instance_id(service_instance):
     c = conn.cursor()
     query = "select instance_id from instance_app where app_name=? limit 1"
-    c.execute(query, [name])
+    c.execute(query, [service_instance])
     result = c.fetchall()
     if len(result) == 0 or len(result[0]) == 0:
         return ""
