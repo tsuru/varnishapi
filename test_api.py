@@ -42,8 +42,12 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
         os.environ["SECRET_KEY"] = "secret"
         os.environ["AMI_ID"] = "ami-123"
         os.environ["SUBNET_ID"] = "subnet-123"
+        os.environ["KEY_PATH"] = "/tmp/testkey.pub"
         reload(api)
         DatabaseTest.setUpClass()
+        f = file(os.environ["KEY_PATH"], "w+")
+        f.write("testkey 123")
+        f.close()
 
     def tearDown(self):
         c = api.conn.cursor()
@@ -51,10 +55,12 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        os.remove(os.environ["KEY_PATH"])
         del os.environ["ACCESS_KEY"]
         del os.environ["SECRET_KEY"]
         del os.environ["AMI_ID"]
         del os.environ["SUBNET_ID"]
+        del os.environ["KEY_PATH"]
         DatabaseTest.tearDownClass()
 
     @patch("boto.ec2.connection.EC2Connection")
@@ -76,10 +82,14 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
         self.assertTrue(instance.run_instances.called)
 
     @patch("boto.ec2.connection.EC2Connection")
-    def test_should_create_instance_on_ec2_using_subnet_and_ami_defined_in_env_var(self, mock):
+    def test_should_create_instance_on_ec2_using_subnet_and_ami_defined_in_env_var_and_user_data(self, mock):
         instance = mock.return_value
         self.api.post("/resources", data={"name": "someapp"})
-        instance.run_instances.assert_called_once_with(image_id=api.ami_id, subnet_id=api.subnet_id)
+        f = open(api.key_path)
+        key = f.read()
+        f.close()
+        user_data = "echo \"{0}\" >> ~/.ssh/authorized_keys".format(key)
+        instance.run_instances.assert_called_once_with(image_id=api.ami_id, subnet_id=api.subnet_id, user_data=user_data)
 
     @patch("boto.ec2.connection.EC2Connection")
     def test_should_store_instance_id_and_app_name_on_database(self, mock):

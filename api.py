@@ -10,6 +10,7 @@ access_key = os.environ.get("ACCESS_KEY")
 secret_key = os.environ.get("SECRET_KEY")
 ami_id = os.environ.get("AMI_ID")
 subnet_id = os.environ.get("SUBNET_ID")
+key_path = os.environ.get("KEY_PATH", "~/.ssh/id_rsa.pub")
 default_db_name = "varnishapi.db"
 vcl_template = """backend default {{
     .host = \\"{0}\\";
@@ -110,7 +111,9 @@ def _delete_ec2_instance(instance_id):
 def _create_ec2_instance():
     from boto.ec2.connection import EC2Connection
     conn = EC2Connection(access_key, secret_key)
-    return conn.run_instances(image_id=ami_id, subnet_id=subnet_id)
+    key = open(key_path).read()
+    user_data = "echo \"{0}\" >> ~/.ssh/authorized_keys".format(key)
+    return conn.run_instances(image_id=ami_id, subnet_id=subnet_id, user_data=user_data)
 
 
 def _store_instance_and_app(reservations, app_name):
