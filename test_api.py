@@ -10,6 +10,7 @@ class DatabaseTest(object):
     @classmethod
     def setUpClass(cls):
         os.environ["DB_PATH"] = ":memory:"
+        reload(api)
         sql_path = os.path.realpath(os.path.join(__file__, "../database.sql"))
         f = open(sql_path)
         sql = f.read().replace("\n", "")
