@@ -149,13 +149,11 @@ class BindTestCase(unittest.TestCase):
         os.environ["ACCESS_KEY"] = "access"
         os.environ["SECRET_KEY"] = "secret"
         reload(api)
-        #DatabaseTest.setUpClass()
 
     @classmethod
     def tearDownClass(cls):
         del os.environ["ACCESS_KEY"]
         del os.environ["SECRET_KEY"]
-        #DatabaseTest.tearDownClass()
 
     @patch("subprocess.call")
     @patch("boto.ec2.connection.EC2Connection")
@@ -192,6 +190,26 @@ class BindTestCase(unittest.TestCase):
         expected = ["ssh", ip, "-l", "ubuntu", cmd]
         cmd_arg = sp_mock.call_args_list[0][0][0]
         self.assertEqual(expected, cmd_arg)
+
+
+class UnbindTestCase(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.api = api.api.test_client()
+        cls.helper = TestHelper()
+        os.environ["ACCESS_KEY"] = "access"
+        os.environ["SECRET_KEY"] = "secret"
+        reload(api)
+
+    @classmethod
+    def tearDownClass(cls):
+        del os.environ["ACCESS_KEY"]
+        del os.environ["SECRET_KEY"]
+
+    @patch("boto.ec2.connection.EC2Connection")
+    def test_unbind_should_get_instance_id(self):
+        self.api.delete("/resources/si_name/host/10.1.1.2")
 
 
 class HelpersTestcase(unittest.TestCase):
