@@ -187,7 +187,7 @@ class BindTestCase(unittest.TestCase):
         ip_mock.return_value = si_ip
         self.api.post("/resources/si_name", data={"hostname": app_ip})
         self.assertTrue(sp_mock.called)
-        cmd = "sudo bash -c 'echo \"{0}\" > /etc/varnish/default.vcl'".format(api.vcl_template.format(app_ip))
+        cmd = "sudo bash -c \"echo '{0}' > /etc/varnish/default.vcl\"".format(api.vcl_template.format(app_ip))
         expected = ["ssh", si_ip, "-l", "ubuntu", cmd]
         cmd_arg = sp_mock.call_args_list[0][0][0]
         self.assertEqual(expected, cmd_arg)
