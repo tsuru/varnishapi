@@ -11,7 +11,7 @@ secret_key = os.environ.get("SECRET_KEY")
 ami_id = os.environ.get("AMI_ID")
 subnet_id = os.environ.get("SUBNET_ID")
 default_db_name = "varnishapi.db"
-vlc_template = """backend default {{
+vcl_template = """backend default {{
     .host = "{0}";
     .port = "80";
 }}
@@ -54,11 +54,13 @@ def _update_vcl_file(instance_address):
     tail = md5(instance_address).hexdigest()
     fname = "/tmp/varnish-out-{0}".format(tail)
     out = file(fname, "w+")
-    exit_status = subprocess.call(["ssh", instance_address, "-l ubuntu"], stdout=out, stderr=subprocess.STDOUT)
+    cmd = 'sudo bash -c \'echo "{0}" > /etc/varnish/default.vcl\''.format(vcl_template.format(instance_address))
+    exit_status = subprocess.call(["ssh", instance_address, "-l", "ubuntu", cmd], stdout=out, stderr=subprocess.STDOUT)
     out.seek(0)
-    syslog.syslog(syslog.LOG_ERR, out.read())
+    out = out.read()
+    syslog.syslog(syslog.LOG_ERR, out)
     if exit_status != 0:
-        raise Exception("Unable to update vcl file from instance with ip {0}".format(instance_address))
+        raise Exception("Unable to update vcl file from instance with ip {0}. Error was: {1}".format(instance_address, out))
 
 
 def _delete_from_database(name):

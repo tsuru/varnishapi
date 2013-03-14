@@ -180,14 +180,18 @@ class BindTestCase(unittest.TestCase):
 
     @patch("subprocess.call")
     @patch("boto.ec2.connection.EC2Connection")
+    @patch("api._get_instance_ip")
     @patch("api._get_instance_id")
-    def test_should_ssh_into_service_instance_and_update_vcl_file_using_template(self, mock, ec2_mock, sp_mock):
+    def test_should_ssh_into_service_instance_and_update_vcl_file_using_template(self, mock, ip_mock, ec2_mock, sp_mock):
+        ip =  "10.2.2.1"
         sp_mock.return_value = 0
+        ip_mock.return_value = ip
         self.api.post("/resources/si_name")
         self.assertTrue(sp_mock.called)
-        # ip =  "10.2.2.1"
-        # expected = ["ssh", ip, "-l ubuntu", ""]
-        # self.assertEqual(expected, sp_mock.call_args_list[0])
+        cmd = "sudo bash -c 'echo \"{0}\" > /etc/varnish/default.vcl'".format(api.vcl_template.format(ip))
+        expected = ["ssh", ip, "-l", "ubuntu", cmd]
+        cmd_arg = sp_mock.call_args_list[0][0][0]
+        self.assertEqual(expected, cmd_arg)
 
 
 class HelpersTestcase(unittest.TestCase):
