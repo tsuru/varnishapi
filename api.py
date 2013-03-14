@@ -37,7 +37,8 @@ def delete_instance(name):
 def bind(name):
     i_id = _get_instance_id(service_instance=name)
     i_ip = _get_instance_ip(instance_id=i_id)
-    _update_vcl_file(i_ip)
+    app_ip = request.form.get("hostname")
+    _update_vcl_file(instance_address=i_ip, app_address=app_ip)
     return "null", 201
 
 
@@ -50,11 +51,11 @@ def _get_instance_ip(instance_id):
     return reservations[0].instances[0].private_ip_address
 
 
-def _update_vcl_file(instance_address):
+def _update_vcl_file(instance_address, app_address):
     tail = md5(instance_address).hexdigest()
     fname = "/tmp/varnish-out-{0}".format(tail)
     out = file(fname, "w+")
-    cmd = 'sudo bash -c \'echo "{0}" > /etc/varnish/default.vcl\''.format(vcl_template.format(instance_address))
+    cmd = 'sudo bash -c \'echo "{0}" > /etc/varnish/default.vcl\''.format(vcl_template.format(app_address))
     exit_status = subprocess.call(["ssh", instance_address, "-l", "ubuntu", cmd], stdout=out, stderr=subprocess.STDOUT)
     out.seek(0)
     out = out.read()
