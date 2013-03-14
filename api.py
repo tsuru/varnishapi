@@ -76,7 +76,7 @@ def _clean_vcl_file(instance_address):
 
 def _update_vcl_file(instance_address, app_address):
     out = file(_rand_stdout_filename(instance_address), "w+")
-    cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl"'.format(vcl_template.format(app_address))
+    cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'.format(vcl_template.format(app_address))
     exit_status = subprocess.call(["ssh", instance_address, "-l", "ubuntu", cmd], stdout=out, stderr=subprocess.STDOUT)
     out.seek(0)
     out = out.read()
