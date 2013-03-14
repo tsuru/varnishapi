@@ -42,6 +42,14 @@ def bind(name):
     return "null", 201
 
 
+@api.route("/resources/<name>/hostname/<host>", methods=["DELETE"])
+def unbind(name, host):
+    i_id = _get_instance_id(service_instance=name)
+    i_ip = _get_instance_ip(instance_id=i_id)
+    _clean_vcl_file(instance_address=i_ip)
+    return "", 200
+
+
 def _get_instance_ip(instance_id):
     from boto.ec2.connection import EC2Connection
     conn = EC2Connection(access_key, secret_key)
@@ -51,10 +59,23 @@ def _get_instance_ip(instance_id):
     return reservations[0].instances[0].private_ip_address
 
 
+def _rand_stdout_filename(salt):
+    tail = md5(salt).hexdigest()
+    return "/tmp/varnish-out-{0}".format(tail)
+
+def _clean_vcl_file(instance_address):
+    out = file(_rand_stdout_filename(instance_address), "w+")
+    cmd = 'sudo bash -c \'echo "" > /etc/varnish/default.vcl\''
+    exit_status = subprocess.call(["ssh", instance_address, "-l", "ubuntu", cmd], stdout=out, stderr=subprocess.STDOUT)
+    out.seek(0)
+    out = out.read()
+    syslog.syslog(syslog.LOG_ERR, out)
+    if exit_status != 0:
+        raise Exception("Unable to clean vcl file from instance with ip {0}. Error was: {1}".format(instance_address, out))
+
+
 def _update_vcl_file(instance_address, app_address):
-    tail = md5(instance_address).hexdigest()
-    fname = "/tmp/varnish-out-{0}".format(tail)
-    out = file(fname, "w+")
+    out = file(_rand_stdout_filename(instance_address), "w+")
     cmd = 'sudo bash -c \'echo "{0}" > /etc/varnish/default.vcl\''.format(vcl_template.format(app_address))
     exit_status = subprocess.call(["ssh", instance_address, "-l", "ubuntu", cmd], stdout=out, stderr=subprocess.STDOUT)
     out.seek(0)

@@ -210,11 +210,36 @@ class UnbindTestCase(unittest.TestCase):
 
     @patch("boto.ec2.connection.EC2Connection")
     @patch("api._get_instance_id")
-    def test_unbind_should_get_instance_id(self, mock, ec2_mock):
-        mock.return_value = "i-1"
-        resp = self.api.delete("/resources/si_name/host/10.1.1.2")
+    @patch("api._clean_vcl_file")
+    def test_unbind_should_get_instance_id(self, vcl_mock, mock, ec2_mock):
+        resp = self.api.delete("/resources/si_name/hostname/10.1.1.2")
         self.assertEqual(200, resp.status_code)
         mock.assert_called_once_with(service_instance="si_name")
+
+    @patch("boto.ec2.connection.EC2Connection")
+    @patch("api._get_instance_id")
+    @patch("api._get_instance_ip")
+    @patch("api._clean_vcl_file")
+    def test_unbind_should_get_instance_ip(self, vcl_mock, mock, id_mock, ec2_mock):
+        id_mock.return_value = "i-1"
+        resp = self.api.delete("/resources/si_name/hostname/10.1.1.2")
+        self.assertEqual(200, resp.status_code)
+        mock.assert_called_once_with(instance_id="i-1")
+
+    @patch("boto.ec2.connection.EC2Connection")
+    @patch("api._get_instance_id")
+    @patch("api._get_instance_ip")
+    @patch("subprocess.call")
+    def test_should_clear_vcl_file(self, sp_mock, ip_mock, id_mock, ec2_mock):
+        si_ip = "10.2.2.1"
+        ip_mock.return_value = si_ip
+        self.api.delete("/resources/si_name/hostname/10.1.1.2")
+        sp_mock.return_value = 0
+        self.assertTrue(sp_mock.called)
+        cmd = "sudo bash -c 'echo \"\" > /etc/varnish/default.vcl'"
+        expected = ["ssh", si_ip, "-l", "ubuntu", cmd]
+        cmd_arg = sp_mock.call_args_list[0][0][0]
+        self.assertEqual(expected, cmd_arg)
 
 
 class HelpersTestcase(unittest.TestCase):
