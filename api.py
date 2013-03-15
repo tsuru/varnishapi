@@ -6,11 +6,11 @@ from md5 import md5
 from flask import Flask, request
 
 api = Flask(__name__)
-access_key = os.environ.get("ACCESS_KEY")
-secret_key = os.environ.get("SECRET_KEY")
+access_key = os.environ.get("EC2_ACCESS_KEY")
+secret_key = os.environ.get("EC2_SECRET_KEY")
 ami_id = os.environ.get("AMI_ID")
 subnet_id = os.environ.get("SUBNET_ID")
-key_path = os.environ.get("KEY_PATH", "~/.ssh/id_rsa.pub")
+key_path = os.environ.get("KEY_PATH", os.path.expanduser("~/.ssh/id_rsa.pub"))
 default_db_name = "varnishapi.db"
 vcl_template = """backend default {{
     .host = \\"{0}\\";

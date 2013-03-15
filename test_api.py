@@ -268,6 +268,5 @@ class HelpersTestcase(unittest.TestCase):
         del os.environ["DB_PATH"]
 
 
-
 if __name__ == "__main__":
     unittest.main()
