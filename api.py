@@ -21,8 +21,8 @@ vcl_template = """backend default {{
 
 @api.route("/resources", methods=["POST"])
 def create_instance():
-    reservations = _create_ec2_instance()
-    _store_instance_and_app(reservations, request.form.get("name")) # check if name is present
+    reservation = _create_ec2_instance()
+    _store_instance_and_app(reservation, request.form.get("name")) # check if name is present
     return "", 201
 
 
@@ -116,11 +116,10 @@ def _create_ec2_instance():
     return conn.run_instances(image_id=ami_id, subnet_id=subnet_id, user_data=user_data)
 
 
-def _store_instance_and_app(reservations, app_name):
+def _store_instance_and_app(reservation, app_name):
     instance_apps = []
-    for r in reservations:
-        for i in r.instances:
-            instance_apps.append((i.id, app_name))
+    for i in reservation.instances:
+        instance_apps.append((i.id, app_name))
     c = conn.cursor()
     c.executemany("insert into instance_app values (?, ?)", instance_apps)
     conn.commit()

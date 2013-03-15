@@ -77,7 +77,7 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
     def test_should_create_instance_on_ec2(self, mock):
         instance = mock.return_value
         r = self.helper.fake_reservation()
-        instance.run_instances.return_value = [r]
+        instance.run_instances.return_value = r
         self.api.post("/resources", data={"name": "someapp"})
         self.assertTrue(instance.run_instances.called)
 
@@ -95,7 +95,7 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
     def test_should_store_instance_id_and_app_name_on_database(self, mock):
         instance = mock.return_value
         r = self.helper.fake_reservation()
-        instance.run_instances.return_value = [r]
+        instance.run_instances.return_value = r
         self.api.post("/resources", data={"name": "someapp"})
         c = api.conn.cursor()
         c.execute("select * from instance_app;")
