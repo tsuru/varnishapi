@@ -113,7 +113,11 @@ def _create_ec2_instance():
     conn = EC2Connection(access_key, secret_key)
     key = open(key_path).read()
     user_data = "echo \"{0}\" >> ~/.ssh/authorized_keys".format(key)
-    return conn.run_instances(image_id=ami_id, subnet_id=subnet_id, user_data=user_data)
+    try:
+        reservation = conn.run_instances(image_id=ami_id, subnet_id=subnet_id, user_data=user_data)
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, e.message)
+    return reservation
 
 
 def _store_instance_and_app(reservation, app_name):
