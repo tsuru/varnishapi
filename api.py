@@ -58,7 +58,8 @@ def _add_instance_to_known_hosts(reservation):
     try:
         subprocess.call(["ssh-keyscan", "-H", address], stdout=f)
     except Exception as e:
-        syslog.syslog(syslog.LOG_ERR, "Caught exception while adding instance ip to known_hosts, below is the original exception.")
+        msg = "Caught exception while adding instance ip '{0}' to known_hosts, below is the original exception.".format(address)
+        syslog.syslog(syslog.LOG_ERR, msg)
         syslog.syslog(syslog.LOG_ERR, e.message)
     finally:
         f.close()
