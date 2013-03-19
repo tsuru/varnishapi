@@ -22,6 +22,7 @@ vcl_template = """backend default {{
 @api.route("/resources", methods=["POST"])
 def create_instance():
     reservation = _create_ec2_instance()
+    _add_instance_to_known_hosts(reservation)
     _store_instance_and_app(reservation, request.form.get("name")) # check if name is present
     return "", 201
 
@@ -49,6 +50,18 @@ def unbind(name, host):
     i_ip = _get_instance_ip(instance_id=i_id)
     _clean_vcl_file(instance_address=i_ip)
     return "", 200
+
+
+def _add_instance_to_known_hosts(reservation):
+    f = file(os.path.expanduser("~/.ssh/known_hosts"), "a+")
+    address = reservation.instances[0].private_ip_address
+    try:
+        subprocess.call(["ssh-keyscan", "-H", address], stdout=f)
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, "Caught exception while adding instance ip to known_hosts, below is the original exception.")
+        syslog.syslog(syslog.LOG_ERR, e.message)
+    finally:
+        f.close()
 
 
 def _get_instance_ip(instance_id):
@@ -112,7 +125,6 @@ def _create_ec2_instance():
     from boto.ec2.connection import EC2Connection
     conn = EC2Connection(access_key, secret_key)
     key = open(key_path).read()
-    user_data = "echo \"{0}\" >> ~/.ssh/authorized_keys"
     user_data = """#cloud-config
 ssh_authorized_keys: ['{0}']
 """.format(key)

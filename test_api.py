@@ -64,17 +64,20 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
         DatabaseTest.tearDownClass()
 
     @patch("boto.ec2.connection.EC2Connection")
-    def test_create_instance_should_return_201(self, mock):
+    @patch("subprocess.call")
+    def test_create_instance_should_return_201(self, sp_mock, mock):
         resp = self.api.post("/resources", data={"name": "someapp"})
         self.assertEqual(resp.status_code, 201)
 
     @patch("boto.ec2.connection.EC2Connection")
-    def test_should_connect_with_ec2_using_environment_variables(self, mock):
+    @patch("subprocess.call")
+    def test_should_connect_with_ec2_using_environment_variables(self, sp_mock, mock):
         self.api.post("/resources", data={"name": "someapp"})
         mock.assert_called_once_with(api.access_key, api.secret_key)
 
     @patch("boto.ec2.connection.EC2Connection")
-    def test_should_create_instance_on_ec2(self, mock):
+    @patch("subprocess.call")
+    def test_should_create_instance_on_ec2(self, sp_mock, mock):
         instance = mock.return_value
         r = self.helper.fake_reservation()
         instance.run_instances.return_value = r
@@ -82,7 +85,8 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
         self.assertTrue(instance.run_instances.called)
 
     @patch("boto.ec2.connection.EC2Connection")
-    def test_should_create_instance_on_ec2_using_subnet_and_ami_defined_in_env_var_and_user_data(self, mock):
+    @patch("subprocess.call")
+    def test_should_create_instance_on_ec2_using_subnet_and_ami_defined_in_env_var_and_user_data(self, sp_mock, mock):
         instance = mock.return_value
         self.api.post("/resources", data={"name": "someapp"})
         f = open(api.key_path)
@@ -94,7 +98,8 @@ ssh_authorized_keys: ['{0}']
         instance.run_instances.assert_called_once_with(image_id=api.ami_id, subnet_id=api.subnet_id, user_data=user_data)
 
     @patch("boto.ec2.connection.EC2Connection")
-    def test_should_store_instance_id_and_app_name_on_database(self, mock):
+    @patch("subprocess.call")
+    def test_should_store_instance_id_and_app_name_on_database(self, sp_mock, mock):
         instance = mock.return_value
         r = self.helper.fake_reservation()
         instance.run_instances.return_value = r
@@ -104,6 +109,17 @@ ssh_authorized_keys: ['{0}']
         result = c.fetchall()
         expected = [("i-1", "someapp")]
         self.assertListEqual(expected, result)
+
+    @patch("boto.ec2.connection.EC2Connection")
+    @patch("subprocess.call")
+    def test_should_add_instance_to_known_hosts(self, sp_mock, ec2_mock):
+        instance = ec2_mock.return_value
+        instance.run_instances.return_value = self.helper.fake_reservation()
+        sp_mock.return_value = 0
+        self.api.post("/resources", data={"name": "someapp"})
+        cmd = ["ssh-keyscan", "-H", "192.169.56.101"]
+        sp_mock.assert_called_once()
+        self.assertEqual(cmd, sp_mock.call_args[0][0])
 
 
 class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
