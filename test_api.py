@@ -88,7 +88,9 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
         f = open(api.key_path)
         key = f.read()
         f.close()
-        user_data = "echo \"{0}\" >> ~/.ssh/authorized_keys".format(key)
+        user_data = """#cloud-config
+ssh_authorized_keys: ['{0}']
+""".format(key)
         instance.run_instances.assert_called_once_with(image_id=api.ami_id, subnet_id=api.subnet_id, user_data=user_data)
 
     @patch("boto.ec2.connection.EC2Connection")

@@ -112,7 +112,10 @@ def _create_ec2_instance():
     from boto.ec2.connection import EC2Connection
     conn = EC2Connection(access_key, secret_key)
     key = open(key_path).read()
-    user_data = "echo \"{0}\" >> ~/.ssh/authorized_keys".format(key)
+    user_data = "echo \"{0}\" >> ~/.ssh/authorized_keys"
+    user_data = """#cloud-config
+ssh_authorized_keys: ['{0}']
+""".format(key)
     try:
         reservation = conn.run_instances(image_id=ami_id, subnet_id=subnet_id, user_data=user_data)
     except Exception as e:
