@@ -83,7 +83,9 @@ def _update_vcl_file(instance_address, app_address):
     out = out.read()
     syslog.syslog(syslog.LOG_ERR, out)
     if exit_status != 0:
-        raise Exception("Unable to update vcl file from instance with ip {0}. Error was: {1}".format(instance_address, out))
+        syslog.syslog(syslog.LOG_ERR, "Unable to update vcl file from instance with ip {0}. Error was: {1}".format(instance_address, out))
+        raise Exception("Caught problem while logging in in service VM. Please try again in a minute...")
+
 
 
 def _delete_from_database(name):
