@@ -39,7 +39,7 @@ def delete_instance(name):
 def bind(name):
     i_id = _get_instance_id(service_instance=name)
     i_ip = _get_instance_ip(instance_id=i_id)
-    app_ip = request.form.get("hostname")
+    app_ip = request.form.get("app-host")
     _update_vcl_file(instance_address=i_ip, app_address=app_ip)
     return "null", 201
 
