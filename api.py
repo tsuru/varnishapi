@@ -22,7 +22,6 @@ vcl_template = """backend default {{
 @api.route("/resources", methods=["POST"])
 def create_instance():
     reservation = _create_ec2_instance()
-    _add_instance_to_known_hosts(reservation)
     _store_instance_and_app(reservation, request.form.get("name")) # check if name is present
     return "", 201
 
@@ -52,19 +51,6 @@ def unbind(name, host):
     return "", 200
 
 
-def _add_instance_to_known_hosts(reservation):
-    f = file(os.path.expanduser("~/.ssh/known_hosts"), "a+")
-    address = reservation.instances[0].private_ip_address
-    try:
-        subprocess.call(["ssh-keyscan", "-H", address], stdout=f)
-    except Exception as e:
-        msg = "Caught exception while adding instance ip '{0}' to known_hosts, below is the original exception.".format(address)
-        syslog.syslog(syslog.LOG_ERR, msg)
-        syslog.syslog(syslog.LOG_ERR, e.message)
-    finally:
-        f.close()
-
-
 def _get_instance_ip(instance_id):
     from boto.ec2.connection import EC2Connection
     conn = EC2Connection(access_key, secret_key)
@@ -92,7 +78,7 @@ def _clean_vcl_file(instance_address):
 def _update_vcl_file(instance_address, app_address):
     out = file(_rand_stdout_filename(instance_address), "w+")
     cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'.format(vcl_template.format(app_address))
-    exit_status = subprocess.call(["ssh", instance_address, "-l", "ubuntu", cmd], stdout=out, stderr=subprocess.STDOUT)
+    exit_status = subprocess.call(["ssh", instance_address, "-l", "ubuntu", "-o", "StrictHostKeyChecking no", cmd], stdout=out, stderr=subprocess.STDOUT)
     out.seek(0)
     out = out.read()
     syslog.syslog(syslog.LOG_ERR, out)
