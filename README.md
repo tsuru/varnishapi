@@ -37,6 +37,7 @@ All you'll need now is to generate an ami from that instance, our api is going t
 
 Pice of cake! The next step is to deploy our api.
 
+
 Deploying the API
 -----------------
 
@@ -71,6 +72,7 @@ Lets set our database path and create it:
     $> tsuru run "sqlite3 /home/application/varnishapi.db < /home/application/current/database.sql"
 
 We're done with our api! Let's create the service in tsuru.
+
 
 Creating the Service
 --------------------
