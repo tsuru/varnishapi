@@ -55,8 +55,7 @@ def unbind(name, host):
 
 
 def _get_instance_ip(instance_id):
-    from boto.ec2.connection import EC2Connection
-    conn = EC2Connection(access_key, secret_key)
+    conn = _ec2_connection()
     reservations = conn.get_all_instances(instance_ids=[instance_id])
     if len(reservations) != 1 or len(reservations[0].instances) != 1:
         return ""  # throw exception?
@@ -108,14 +107,12 @@ def _get_instance_id(service_instance):
 
 
 def _delete_ec2_instance(instance_id):
-    from boto.ec2.connection import EC2Connection
-    conn = EC2Connection(access_key, secret_key)
+    conn = _ec2_connection()
     return conn.terminate_instances(instance_ids=[instance_id])
 
 
 def _create_ec2_instance():
-    from boto.ec2.connection import EC2Connection
-    conn = EC2Connection(access_key, secret_key)
+    conn = _ec2_connection()
     key = open(key_path).read()
     user_data = """#cloud-config
 ssh_authorized_keys: ['{0}']
@@ -127,6 +124,11 @@ ssh_authorized_keys: ['{0}']
         syslog.syslog(syslog.LOG_ERR, "Got error while creating EC2 instance:")
         syslog.syslog(syslog.LOG_ERR, e.message)
     return reservation
+
+
+def _ec2_connection():
+    from boto.ec2.connection import EC2Connection
+    return EC2Connection(access_key, secret_key)
 
 
 def _store_instance_and_app(reservation, app_name):
