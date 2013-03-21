@@ -8,6 +8,7 @@ from flask import Flask, request
 api = Flask(__name__)
 access_key = os.environ.get("EC2_ACCESS_KEY")
 secret_key = os.environ.get("EC2_SECRET_KEY")
+region = os.environ.get("EC2_REGION", "sa-east-1")
 ami_id = os.environ.get("AMI_ID")
 subnet_id = os.environ.get("SUBNET_ID")
 key_path = os.environ.get("KEY_PATH", os.path.expanduser("~/.ssh/id_rsa.pub"))
@@ -127,8 +128,8 @@ ssh_authorized_keys: ['{0}']
 
 
 def _ec2_connection():
-    from boto.ec2.connection import EC2Connection
-    return EC2Connection(access_key, secret_key)
+    from boto import ec2
+    return ec2.connect_to_region(region, access_key, secret_key)
 
 
 def _store_instance_and_app(reservation, app_name):

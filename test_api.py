@@ -38,8 +38,8 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
     def setUpClass(cls):
         cls.api = api.api.test_client()
         cls.helper = TestHelper()
-        os.environ["ACCESS_KEY"] = "access"
-        os.environ["SECRET_KEY"] = "secret"
+        os.environ["EC2_ACCESS_KEY"] = "access"
+        os.environ["EC2_SECRET_KEY"] = "secret"
         os.environ["AMI_ID"] = "ami-123"
         os.environ["SUBNET_ID"] = "subnet-123"
         os.environ["KEY_PATH"] = "/tmp/testkey.pub"
@@ -56,24 +56,24 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         os.remove(os.environ["KEY_PATH"])
-        del os.environ["ACCESS_KEY"]
-        del os.environ["SECRET_KEY"]
+        del os.environ["EC2_ACCESS_KEY"]
+        del os.environ["EC2_SECRET_KEY"]
         del os.environ["AMI_ID"]
         del os.environ["SUBNET_ID"]
         del os.environ["KEY_PATH"]
         DatabaseTest.tearDownClass()
 
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     def test_create_instance_should_return_201(self, mock):
         resp = self.api.post("/resources", data={"name": "someapp"})
         self.assertEqual(resp.status_code, 201)
 
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     def test_should_connect_with_ec2_using_environment_variables(self, mock):
         self.api.post("/resources", data={"name": "someapp"})
-        mock.assert_called_once_with(api.access_key, api.secret_key)
+        mock.assert_called_once_with("sa-east-1", api.access_key, api.secret_key)
 
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     def test_should_create_instance_on_ec2(self, mock):
         instance = mock.return_value
         r = self.helper.fake_reservation()
@@ -81,7 +81,7 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
         self.api.post("/resources", data={"name": "someapp"})
         self.assertTrue(instance.run_instances.called)
 
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     def test_should_create_instance_on_ec2_using_subnet_and_ami_defined_in_env_var_and_user_data(self, mock):
         instance = mock.return_value
         self.api.post("/resources", data={"name": "someapp"})
@@ -93,7 +93,7 @@ ssh_authorized_keys: ['{0}']
 """.format(key)
         instance.run_instances.assert_called_once_with(image_id=api.ami_id, subnet_id=api.subnet_id, user_data=user_data)
 
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     def test_should_store_instance_id_and_app_name_on_database(self, mock):
         instance = mock.return_value
         r = self.helper.fake_reservation()
@@ -105,7 +105,7 @@ ssh_authorized_keys: ['{0}']
         expected = [("i-1", "someapp")]
         self.assertListEqual(expected, result)
 
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     @patch("syslog.syslog")
     def test_should_log_error_when_cannot_create_ec2_instance(self, log_mock, ec2_mock):
         instance = ec2_mock.return_value
@@ -121,29 +121,29 @@ class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.api = api.api.test_client()
-        os.environ["ACCESS_KEY"] = "access"
-        os.environ["SECRET_KEY"] = "secret"
+        os.environ["EC2_ACCESS_KEY"] = "access"
+        os.environ["EC2_SECRET_KEY"] = "secret"
         reload(api)
         DatabaseTest.setUpClass()
 
     @classmethod
     def tearDownClass(cls):
-        del os.environ["ACCESS_KEY"]
-        del os.environ["SECRET_KEY"]
+        del os.environ["EC2_ACCESS_KEY"]
+        del os.environ["EC2_SECRET_KEY"]
         DatabaseTest.tearDownClass()
 
     def tearDown(self):
         c = api.conn.cursor()
         c.execute("delete from instance_app;")
 
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     @patch("api._get_instance_id")
     def test_should_get_and_be_success(self, mock, ec2_mock):
         mock.return_value = ["i-1"]
         r = self.api.delete("/resources/service_instance_name")
         self.assertEqual(200, r.status_code)
 
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     def test_should_call_ec2_terminate_instances(self, mock):
         instance = mock.return_value
         instance.terminate_instances.return_value = ["i-1"]
@@ -152,7 +152,7 @@ class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
         self.api.delete("/resources/si_name")
         instance.terminate_instances.assert_called_once_with(instance_ids=["i-1"])
 
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     def test_should_remove_record_from_the_database(self, mock):
         c = api.conn.cursor()
         c.execute("insert into instance_app values ('i-1', 'si_name')")
@@ -168,17 +168,17 @@ class BindTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.api = api.api.test_client()
         cls.helper = TestHelper()
-        os.environ["ACCESS_KEY"] = "access"
-        os.environ["SECRET_KEY"] = "secret"
+        os.environ["EC2_ACCESS_KEY"] = "access"
+        os.environ["EC2_SECRET_KEY"] = "secret"
         reload(api)
 
     @classmethod
     def tearDownClass(cls):
-        del os.environ["ACCESS_KEY"]
-        del os.environ["SECRET_KEY"]
+        del os.environ["EC2_ACCESS_KEY"]
+        del os.environ["EC2_SECRET_KEY"]
 
     @patch("subprocess.call")
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     @patch("api._get_instance_id")
     def test_should_get_instance_id_from_database(self, mock, ec2_mock, sp_mock):
         sp_mock.return_value = 0
@@ -188,7 +188,7 @@ class BindTestCase(unittest.TestCase):
         mock.assert_called_once_with(service_instance="si_name")
 
     @patch("subprocess.call")
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     @patch("api._get_instance_id")
     def test_should_get_instance_ip_from_amazon(self, mock, ec2_mock, sp_mock):
         sp_mock.return_value = 0
@@ -199,7 +199,7 @@ class BindTestCase(unittest.TestCase):
         instance.get_all_instances.assert_called_once_with(instance_ids=["i-1"])
 
     @patch("subprocess.call")
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     @patch("api._get_instance_ip")
     @patch("api._get_instance_id")
     def test_should_ssh_into_service_instance_and_update_vcl_file_using_template(self, mock, ip_mock, ec2_mock, sp_mock):
@@ -221,16 +221,16 @@ class UnbindTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.api = api.api.test_client()
         cls.helper = TestHelper()
-        os.environ["ACCESS_KEY"] = "access"
-        os.environ["SECRET_KEY"] = "secret"
+        os.environ["EC2_ACCESS_KEY"] = "access"
+        os.environ["EC2_SECRET_KEY"] = "secret"
         reload(api)
 
     @classmethod
     def tearDownClass(cls):
-        del os.environ["ACCESS_KEY"]
-        del os.environ["SECRET_KEY"]
+        del os.environ["EC2_ACCESS_KEY"]
+        del os.environ["EC2_SECRET_KEY"]
 
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     @patch("api._get_instance_id")
     @patch("api._clean_vcl_file")
     def test_unbind_should_get_instance_id(self, vcl_mock, mock, ec2_mock):
@@ -238,7 +238,7 @@ class UnbindTestCase(unittest.TestCase):
         self.assertEqual(200, resp.status_code)
         mock.assert_called_once_with(service_instance="si_name")
 
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     @patch("api._get_instance_id")
     @patch("api._get_instance_ip")
     @patch("api._clean_vcl_file")
@@ -248,7 +248,7 @@ class UnbindTestCase(unittest.TestCase):
         self.assertEqual(200, resp.status_code)
         mock.assert_called_once_with(instance_id="i-1")
 
-    @patch("boto.ec2.connection.EC2Connection")
+    @patch("boto.ec2.connect_to_region")
     @patch("api._get_instance_id")
     @patch("api._get_instance_ip")
     @patch("subprocess.call")
