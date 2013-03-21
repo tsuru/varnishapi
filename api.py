@@ -22,7 +22,7 @@ vcl_template = """backend default {{
 @api.route("/resources", methods=["POST"])
 def create_instance():
     reservation = _create_ec2_instance()
-    _store_instance_and_app(reservation, request.form.get("name")) # check if name is present
+    _store_instance_and_app(reservation, request.form.get("name"))  # check if name is present
     return "", 201
 
 
@@ -56,13 +56,14 @@ def _get_instance_ip(instance_id):
     conn = EC2Connection(access_key, secret_key)
     reservations = conn.get_all_instances(instance_ids=[instance_id])
     if len(reservations) != 1 or len(reservations[0].instances) != 1:
-        return "" #throw exception?
+        return ""  # throw exception?
     return reservations[0].instances[0].private_ip_address
 
 
 def _rand_stdout_filename(salt):
     tail = md5(salt).hexdigest()
     return "/tmp/varnish-out-{0}".format(tail)
+
 
 def _clean_vcl_file(instance_address):
     out = file(_rand_stdout_filename(instance_address), "w+")
@@ -85,7 +86,6 @@ def _update_vcl_file(instance_address, app_address):
     if exit_status != 0:
         syslog.syslog(syslog.LOG_ERR, "Unable to update vcl file from instance with ip {0}. Error was: {1}".format(instance_address, out))
         raise Exception("Caught problem while logging in in service VM. Please try again in a minute...")
-
 
 
 def _delete_from_database(name):
@@ -120,6 +120,7 @@ ssh_authorized_keys: ['{0}']
     try:
         reservation = conn.run_instances(image_id=ami_id, subnet_id=subnet_id, user_data=user_data)
     except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, "Got error while creating EC2 instance:")
         syslog.syslog(syslog.LOG_ERR, e.message)
     return reservation
 
@@ -134,7 +135,7 @@ def _store_instance_and_app(reservation, app_name):
 
 
 def _get_database_name():
-    if os.environ.get("DB_PATH"): # this env var must be an absolute path
+    if os.environ.get("DB_PATH"):  # this env var must be an absolute path
         return os.environ["DB_PATH"]
     return os.path.realpath(os.path.join(__file__, "../", default_db_name))
 
