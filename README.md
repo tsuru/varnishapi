@@ -52,7 +52,7 @@ since our api does not respond through this url.
 
 Alright, let's configure our application, it'll need to talk with EC2 api, and it does so by using environment variables. Here's what you need:
 
-    $> tsuru env-set ACCESS_KEY=your-access-key SECRET_KEY=your-secret-key
+    $> tsuru env-set EC2_ACCESS_KEY=your-access-key EC2_SECRET_KEY=your-secret-key
 
 We'll need to pass the ami we just generated to run when a user requests a service creation, let's set what ami we're gonna use:
 
