@@ -71,7 +71,9 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
     @patch("boto.ec2.connect_to_region")
     def test_should_connect_with_ec2_using_environment_variables(self, mock):
         self.api.post("/resources", data={"name": "someapp"})
-        mock.assert_called_once_with("sa-east-1", api.access_key, api.secret_key)
+        mock.assert_called_once_with("sa-east-1",
+                                     aws_access_key_id=api.access_key,
+                                     aws_secret_access_key=api.secret_key)
 
     @patch("boto.ec2.connect_to_region")
     def test_should_create_instance_on_ec2(self, mock):

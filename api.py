@@ -129,7 +129,9 @@ ssh_authorized_keys: ['{0}']
 
 def _ec2_connection():
     from boto import ec2
-    return ec2.connect_to_region(region, access_key, secret_key)
+    return ec2.connect_to_region(region,
+                                 aws_access_key_id=access_key,
+                                 aws_secret_access_key=secret_key)
 
 
 def _store_instance_and_app(reservation, app_name):
