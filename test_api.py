@@ -105,6 +105,16 @@ ssh_authorized_keys: ['{0}']
         expected = [("i-1", "someapp")]
         self.assertListEqual(expected, result)
 
+    @patch("boto.ec2.connection.EC2Connection")
+    @patch("syslog.syslog")
+    def test_should_log_error_when_cannot_create_ec2_instance(self, log_mock, ec2_mock):
+        instance = ec2_mock.return_value
+        instance.run_instances.side_effect = Exception("BoOm!")
+        resp = self.api.post("/resources", data={"name": "someapp"})
+        self.assertEqual(500, resp.status_code)
+        self.assertEqual("Caught error while creating service instance.", resp.data)
+        self.assertEqual(2, log_mock.call_count)
+
 
 class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
 

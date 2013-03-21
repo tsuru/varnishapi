@@ -21,8 +21,11 @@ vcl_template = """backend default {{
 
 @api.route("/resources", methods=["POST"])
 def create_instance():
-    reservation = _create_ec2_instance()
-    _store_instance_and_app(reservation, request.form.get("name"))  # check if name is present
+    try:
+        reservation = _create_ec2_instance()
+        _store_instance_and_app(reservation, request.form.get("name"))  # check if name is present
+    except Exception:
+        return "Caught error while creating service instance.", 500
     return "", 201
 
 
@@ -117,6 +120,7 @@ def _create_ec2_instance():
     user_data = """#cloud-config
 ssh_authorized_keys: ['{0}']
 """.format(key)
+    reservation = None
     try:
         reservation = conn.run_instances(image_id=ami_id, subnet_id=subnet_id, user_data=user_data)
     except Exception as e:
