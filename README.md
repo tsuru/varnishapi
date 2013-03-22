@@ -62,6 +62,9 @@ If you are running this on a VPC (which it is meant for), you'll also need to te
 
     $> tsuru env-set SUBNET_ID=your-subnet-id
 
+Every service instance has an elastic load balancing in front of it, which by default, is configured to `internet-facing`, which means you can access it publicly,
+if you don't want this behavior, set the `ELB_SCHEME` environment variable to `internal`.
+
 The api also needs a ssh key in order to comunicate with the service instances' vms, let's generate it:
 
     $> tsuru run 'ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa'
