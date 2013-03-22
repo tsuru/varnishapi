@@ -4,6 +4,7 @@ import subprocess
 import syslog
 from md5 import md5
 from flask import Flask, request
+from boto.ec2.elb import HealthCheck
 
 api = Flask(__name__)
 access_key = os.environ.get("EC2_ACCESS_KEY")
@@ -11,6 +12,7 @@ secret_key = os.environ.get("EC2_SECRET_KEY")
 region = os.environ.get("EC2_REGION", "sa-east-1")
 ami_id = os.environ.get("AMI_ID")
 subnet_id = os.environ.get("SUBNET_ID")
+elb_scheme = os.environ.get("ELB_SCHEME", "internet-facing")
 key_path = os.environ.get("KEY_PATH", os.path.expanduser("~/.ssh/id_rsa.pub"))
 default_db_name = "varnishapi.db"
 vcl_template = """backend default {{
@@ -23,8 +25,11 @@ vcl_template = """backend default {{
 @api.route("/resources", methods=["POST"])
 def create_instance():
     try:
+        name = request.form.get("name")  # check if name is present
         reservation = _create_ec2_instance()
-        _store_instance_and_app(reservation, request.form.get("name"))  # check if name is present
+        elb = _create_elb(name)
+        _register_instance_with_lb(elb, reservation)
+        _store_instance_and_app(reservation, name)
     except Exception:
         return "Caught error while creating service instance.", 500
     return "", 201
@@ -125,6 +130,34 @@ ssh_authorized_keys: ['{0}']
         syslog.syslog(syslog.LOG_ERR, "Got error while creating EC2 instance:")
         syslog.syslog(syslog.LOG_ERR, e.message)
     return reservation
+
+
+def _create_elb(name):
+    conn = _elb_connection()
+    zones = ["sa-east-1"]
+    listeners = [(80, 80, "HTTP")]
+    elb = conn.create_load_balancer(name=name, zones=zones,
+                                     listeners=listeners, subnets=[subnet_id],
+                                     scheme=elb_scheme)
+    hc = HealthCheck(
+        interval=20,
+        healthy_threshold=3,
+        unhealthy_threshold=5,
+        target='TCP:80'  # use real healthcheck (#10)
+    )
+    elb.configure_health_check(hc)
+    return elb
+
+
+def _register_instance_with_lb(elb, reservation):
+    elb.register_instances(instances=[reservation.instances[0].id])
+
+
+def _elb_connection():
+    from boto.ec2 import elb
+    return elb.connect_to_region(region,
+                                 aws_access_key_id=access_key,
+                                 aws_secret_access_key=secret_key)
 
 
 def _ec2_connection():
