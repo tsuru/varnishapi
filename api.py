@@ -40,6 +40,7 @@ def delete_instance(name):
     instance_id = _get_instance_id(service_instance=name)
     _delete_ec2_instance(instance_id=instance_id)
     _delete_from_database(name)
+    _delete_elb(name)
     return "", 200
 
 
@@ -151,6 +152,11 @@ def _create_elb(name):
 
 def _register_instance_with_lb(elb, reservation):
     elb.register_instances(instances=[reservation.instances[0].id])
+
+
+def _delete_elb(name):
+    conn = _elb_connection()
+    conn.delete_load_balancer(name=name)
 
 
 def _elb_connection():

@@ -172,13 +172,15 @@ class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
 
     @patch("boto.ec2.connect_to_region")
     @patch("api._get_instance_id")
-    def test_should_get_and_be_success(self, mock, ec2_mock):
+    @patch("boto.ec2.elb.connect_to_region")
+    def test_should_get_and_be_success(self, elb_mock, mock, ec2_mock):
         mock.return_value = ["i-1"]
         r = self.api.delete("/resources/service_instance_name")
         self.assertEqual(200, r.status_code)
 
     @patch("boto.ec2.connect_to_region")
-    def test_should_call_ec2_terminate_instances(self, mock):
+    @patch("boto.ec2.elb.connect_to_region")
+    def test_should_call_ec2_terminate_instances(self, elb_mock, mock):
         instance = mock.return_value
         instance.terminate_instances.return_value = ["i-1"]
         c = api.conn.cursor()
@@ -187,13 +189,23 @@ class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
         instance.terminate_instances.assert_called_once_with(instance_ids=["i-1"])
 
     @patch("boto.ec2.connect_to_region")
-    def test_should_remove_record_from_the_database(self, mock):
+    @patch("boto.ec2.elb.connect_to_region")
+    def test_should_remove_record_from_the_database(self, elb_mock, mock):
         c = api.conn.cursor()
         c.execute("insert into instance_app values ('i-1', 'si_name')")
         self.api.delete("/resources/si_name")
         c.execute("select * from instance_app where app_name='si_name'")
         results = c.fetchall()
         self.assertListEqual([], results)
+
+    @patch("boto.ec2.connect_to_region")
+    @patch("boto.ec2.elb.connect_to_region")
+    def test_should_remove_elb(self, elb_mock, ec2_mock):
+        instance = elb_mock.return_value
+        #ec2_instance = ec2_mock.return_value
+        #ec2_instance.terminate_instances.return_value = ["i-1"]
+        self.api.delete("/resources/si_name")
+        instance.delete_load_balancer.assert_called_once_with(name="si_name")
 
 
 class BindTestCase(unittest.TestCase):
