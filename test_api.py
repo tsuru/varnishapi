@@ -202,8 +202,6 @@ class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
     @patch("boto.ec2.elb.connect_to_region")
     def test_should_remove_elb(self, elb_mock, ec2_mock):
         instance = elb_mock.return_value
-        #ec2_instance = ec2_mock.return_value
-        #ec2_instance.terminate_instances.return_value = ["i-1"]
         self.api.delete("/resources/si_name")
         instance.delete_load_balancer.assert_called_once_with(name="si_name")
 
