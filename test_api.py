@@ -302,7 +302,7 @@ class UnbindTestCase(unittest.TestCase):
         self.api.delete("/resources/si_name/hostname/10.1.1.2")
         sp_mock.return_value = 0
         self.assertTrue(sp_mock.called)
-        cmd = "sudo bash -c 'echo \"\" > /etc/varnish/default.vcl'"
+        cmd = "sudo bash -c \"echo '{0}' > /etc/varnish/default.vcl && service varnish reload\"".format(api.vcl_template.format("localhost"))
         expected = ["ssh", si_ip, "-l", "ubuntu", cmd]
         cmd_arg = sp_mock.call_args_list[0][0][0]
         self.assertEqual(expected, cmd_arg)
