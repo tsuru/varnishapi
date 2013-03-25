@@ -30,7 +30,9 @@ def create_instance():
         elb = _create_elb(name)
         _register_instance_with_lb(elb, reservation)
         _store_instance_and_app(reservation, name)
-    except Exception:
+    except Exception as e:
+        syslog.syslog("Caught error while creating service instance:")
+        syslog.syslog(e.message)
         return "Caught error while creating service instance.", 500
     return "", 201
 
