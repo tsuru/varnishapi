@@ -137,9 +137,8 @@ ssh_authorized_keys: ['{0}']
 
 def _create_elb(name):
     conn = _elb_connection()
-    zones = ["sa-east-1"]
     listeners = [(80, 80, "HTTP")]
-    elb = conn.create_load_balancer(name=name, zones=zones,
+    elb = conn.create_load_balancer(name=name, zones=[],  # zone from env?
                                      listeners=listeners, subnets=[subnet_id],
                                      scheme=elb_scheme)
     hc = HealthCheck(
