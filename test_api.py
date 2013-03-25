@@ -121,7 +121,7 @@ ssh_authorized_keys: ['{0}']
         resp = self.api.post("/resources", data={"name": "someapp"})
         self.assertEqual(500, resp.status_code)
         self.assertEqual("Caught error while creating service instance.", resp.data)
-        self.assertEqual(2, log_mock.call_count)
+        self.assertEqual(4, log_mock.call_count)
 
     @patch("boto.ec2.connect_to_region")
     @patch("boto.ec2.elb.connect_to_region")
@@ -131,7 +131,7 @@ ssh_authorized_keys: ['{0}']
         instance.create_load_balancer.return_value = lb
         self.api.post("/resources", data={"name": "someapp"})
         elb_mock.assert_called_once_with("sa-east-1", aws_access_key_id=api.access_key, aws_secret_access_key=api.secret_key)
-        instance.create_load_balancer.assert_called_once_with(name="someapp", zones=["sa-east-1"],
+        instance.create_load_balancer.assert_called_once_with(name="someapp", zones=[],
                                                               listeners=[(80,80,"HTTP")],
                                                               subnets=[api.subnet_id],
                                                               scheme=api.elb_scheme)
