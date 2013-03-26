@@ -323,7 +323,7 @@ class InfoTestCase(DatabaseTest, unittest.TestCase):
         c.execute("insert into instance_app values (?, ?, ?)", ["i-1", "si_name", dns_name])
         resp = self.api.get("/resources/si_name")
         self.assertEqual(200, resp.status_code)
-        expected = [{"label": "dns name", "value": dns_name}]
+        expected = [{"label": "Dns Name", "value": dns_name}]
         self.assertListEqual(expected, json.loads(resp.data))
 
 
