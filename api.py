@@ -1,3 +1,4 @@
+import json
 import os
 import sqlite3
 import subprocess
@@ -63,8 +64,19 @@ def unbind(name, host):
     return "", 200
 
 
+@api.route("/resources/<name>", methods=["GET"])
 def info(name):
-    pass
+    dns = _get_elb_dns(name)
+    return json.dumps({"dns name": dns}), 200
+
+
+def _get_elb_dns(name):
+    c = conn.cursor()
+    c.execute("select elb_dns_name from instance_app where app_name=?", [name])
+    result = c.fetchall()
+    if len(result) == 1 and len(result[0]) == 1:
+        return result[0][0]
+    return ""
 
 
 def _get_instance_ip(instance_id):

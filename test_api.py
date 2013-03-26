@@ -309,10 +309,21 @@ class UnbindTestCase(unittest.TestCase):
         self.assertEqual(expected, cmd_arg)
 
 
-class InfoTestCase(unittest.TestCase):
+class InfoTestCase(DatabaseTest, unittest.TestCase):
 
-    pass
-    #def test_should_
+    @classmethod
+    def setUpClass(cls):
+        cls.api = api.api.test_client()
+        DatabaseTest.setUpClass()
+
+    def test_should_return_elb_dns_name_from_database(self):
+        dns_name = "elb-dns.elb.amazon.com"
+        c = api.conn.cursor()
+        c.execute("insert into instance_app values (?, ?, ?)", ["i-1", "si_name", dns_name])
+        resp = self.api.get("/resources/si_name")
+        self.assertEqual(200, resp.status_code)
+        expected = '{{"dns name": "{0}"}}'.format(dns_name)
+        self.assertEqual(expected, resp.data)
 
 
 class HelpersTestcase(unittest.TestCase):
