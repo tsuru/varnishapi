@@ -14,7 +14,7 @@ We are also using wget on the varnish server that we setup, but it's probably al
 Pre Configuration
 -----------------
 
-This api uses a ami with varnish installed and with some basic configurations, such as listen in port 80.
+This api uses an ami with varnish installed and with some basic configurations, such as listen in port 80.
 You will need to build that image, I suggest booting a amazon instance, install and configure everything and then generate
 an ami from the instance.
 
@@ -33,7 +33,8 @@ Restart it so the configurations can take effect:
 
     $> sudo service varnish restart
 
-All you'll need now is to generate an ami from that instance, our api is going to make use of it.
+All you'll need now is to generate an ami from that instance, our api is going to make use of it. If you don't know how to do that,
+check it out [here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html). Let the ami id handy, we're going to use it later ;)
 
 Pice of cake! The next step is to deploy our api.
 
@@ -47,6 +48,19 @@ First, let's create an app in tsuru, from the project root, execute the followin
     $> git remote add tsuru git@remote.sbrubles.com # the returned remote ;)
     $> git push tsuru master
 
+The push will return an error telling you that you can't push code before the app unit is up, wait until your unit is in service,
+you can check with:
+
+    $> tsuru app-list
+
+When you get an output like this you can proceed to push.
+
+    +------------------+-------------------------+------------------------------------------------------------------+
+    | Application      | Units State Summary     | Address                                                          |
+    +------------------+-------------------------+------------------------------------------------------------------+
+    | your-app         | 1 of 1 units in-service | your-app.sa-east-1.elb.amazonaws.com                             |
+    +------------------+-------------------------+------------------------------------------------------------------+
+
 Now if you access our app endpoint at "/" (you can check with `tsuru app-info` cmd) you should get a 404, which is right,
 since our api does not respond through this url.
 
@@ -58,7 +72,7 @@ We'll need to pass the ami we just generated to run when a user requests a servi
 
     $> tsuru env-set AMI_ID=your-ami-id
 
-If you are running this on a VPC (which it is meant for), you'll also need to tell the api in which subnet it will spawn the service's vms for the applications:
+If you are running this on a VPC, you'll also need to tell the api in which subnet it will spawn the service's vms for the applications:
 
     $> tsuru env-set SUBNET_ID=your-subnet-id
 
@@ -69,7 +83,7 @@ The api also needs a ssh key in order to comunicate with the service instances' 
 
     $> tsuru run 'ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa'
 
-Lets set our database path and create it:
+Let's set our database path and create it:
 
     $> tsuru env-set DB_PATH=/home/application/varnishapi.db
     $> tsuru run "sqlite3 /home/application/varnishapi.db < /home/application/current/database.sql"
