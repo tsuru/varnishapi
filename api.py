@@ -29,7 +29,7 @@ def create_instance():
         reservation = _create_ec2_instance()
         elb = _create_elb(name)
         _register_instance_with_lb(elb, reservation)
-        _store_instance_and_app(reservation, name)
+        _store_instance_and_app(reservation, name, elb.dns_name)
     except Exception as e:
         syslog.syslog("Caught error while creating service instance:")
         syslog.syslog(e.message)
@@ -61,6 +61,10 @@ def unbind(name, host):
     i_ip = _get_instance_ip(instance_id=i_id)
     _clean_vcl_file(instance_address=i_ip)
     return "", 200
+
+
+def info(name):
+    pass
 
 
 def _get_instance_ip(instance_id):
@@ -174,12 +178,12 @@ def _ec2_connection():
                                  aws_secret_access_key=secret_key)
 
 
-def _store_instance_and_app(reservation, app_name):
+def _store_instance_and_app(reservation, app_name, elb_dns_name):
     instance_apps = []
     for i in reservation.instances:
-        instance_apps.append((i.id, app_name))
+        instance_apps.append((i.id, app_name, elb_dns_name))
     c = conn.cursor()
-    c.executemany("insert into instance_app values (?, ?)", instance_apps)
+    c.executemany("insert into instance_app values (?, ?, ?)", instance_apps)
     conn.commit()
 
 

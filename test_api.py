@@ -100,16 +100,17 @@ ssh_authorized_keys: ['{0}']
         instance.run_instances.assert_called_once_with(image_id=api.ami_id, subnet_id=api.subnet_id, user_data=user_data)
 
     @patch("boto.ec2.connect_to_region")
-    @patch("boto.ec2.elb.connect_to_region")
-    def test_should_store_instance_id_and_app_name_on_database(self, elb_mock, mock):
+    @patch("api._create_elb")
+    def test_should_store_instance_id_app_and_elb_dns_name_on_database(self, elb_mock, mock):
         instance = mock.return_value
         r = self.helper.fake_reservation()
         instance.run_instances.return_value = r
+        elb_mock.return_value = Mock(dns_name="elb-dns-name.elb.amazon.com")
         self.api.post("/resources", data={"name": "someapp"})
         c = api.conn.cursor()
         c.execute("select * from instance_app;")
         result = c.fetchall()
-        expected = [("i-1", "someapp")]
+        expected = [("i-1", "someapp", "elb-dns-name.elb.amazon.com")]
         self.assertListEqual(expected, result)
 
     @patch("boto.ec2.connect_to_region")
@@ -184,7 +185,7 @@ class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
         instance = mock.return_value
         instance.terminate_instances.return_value = ["i-1"]
         c = api.conn.cursor()
-        c.execute("insert into instance_app values ('i-1', 'si_name')")
+        c.execute("insert into instance_app values ('i-1', 'si_name', 'elb-dns.elb.amazon.com')")
         self.api.delete("/resources/si_name")
         instance.terminate_instances.assert_called_once_with(instance_ids=["i-1"])
 
@@ -192,7 +193,7 @@ class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
     @patch("boto.ec2.elb.connect_to_region")
     def test_should_remove_record_from_the_database(self, elb_mock, mock):
         c = api.conn.cursor()
-        c.execute("insert into instance_app values ('i-1', 'si_name')")
+        c.execute("insert into instance_app values ('i-1', 'si_name', 'elb-dns.elb.amazon.com')")
         self.api.delete("/resources/si_name")
         c.execute("select * from instance_app where app_name='si_name'")
         results = c.fetchall()
@@ -306,6 +307,12 @@ class UnbindTestCase(unittest.TestCase):
         expected = ["ssh", si_ip, "-l", "ubuntu", cmd]
         cmd_arg = sp_mock.call_args_list[0][0][0]
         self.assertEqual(expected, cmd_arg)
+
+
+class InfoTestCase(unittest.TestCase):
+
+    pass
+    #def test_should_
 
 
 class HelpersTestcase(unittest.TestCase):
