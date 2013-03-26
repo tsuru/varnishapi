@@ -67,7 +67,7 @@ def unbind(name, host):
 @api.route("/resources/<name>", methods=["GET"])
 def info(name):
     dns = _get_elb_dns(name)
-    return json.dumps({"label": "dns name", "value": dns}), 200
+    return json.dumps([{"label": "dns name", "value": dns}]), 200
 
 
 def _get_elb_dns(name):
