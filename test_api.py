@@ -6,7 +6,7 @@ import api
 import json
 import os
 import unittest
-from mock import patch, Mock
+from mock import patch
 from collections import namedtuple
 
 
@@ -92,7 +92,7 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
         self.assertTrue(instance.run_instances.called)
 
     @patch("boto.ec2.connect_to_region")
-    def test_should_create_instance_on_ec2_using_subnet_and_ami_defined_in_env_var_and_user_data(self, mock):
+    def test_should_create_instance_on_ec2_using_subnet_and_ami(self, mock):
         instance = mock.return_value
         self.api.post("/resources", data={"name": "someapp"})
         f = open(api.key_path)
@@ -101,7 +101,9 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
         user_data = """#cloud-config
 ssh_authorized_keys: ['{0}']
 """.format(key)
-        instance.run_instances.assert_called_once_with(image_id=api.ami_id, subnet_id=api.subnet_id, user_data=user_data)
+        instance.run_instances.assert_called_once_with(image_id=api.ami_id,
+                                                       subnet_id=api.subnet_id,
+                                                       user_data=user_data)
 
     @patch("boto.ec2.connect_to_region")
     def test_should_store_instance_id_app_and_dns_name_on_database(self, mock):
@@ -212,14 +214,19 @@ class BindTestCase(unittest.TestCase):
     @patch("boto.ec2.connect_to_region")
     @patch("api._get_instance_ip")
     @patch("api._get_instance_id")
-    def test_should_ssh_into_service_instance_and_update_vcl_file_using_template(self, mock, ip_mock, ec2_mock, sp_mock):
-        si_ip =  "10.2.2.1"
+    def test_should_ssh_into_service_instance_and_update_vcl_file_using_template(self,
+                                                                                 mock,
+                                                                                 ip_mock,
+                                                                                 ec2_mock,
+                                                                                 sp_mock):
+        si_ip = "10.2.2.1"
         app_ip = "10.1.1.2"
         sp_mock.return_value = 0
         ip_mock.return_value = si_ip
         self.api.post("/resources/si_name", data={"app-host": app_ip})
         self.assertTrue(sp_mock.called)
-        cmd = "sudo bash -c \"echo '{0}' > /etc/varnish/default.vcl && service varnish reload\"".format(api.vcl_template.format(app_ip))
+        cmd = "sudo bash -c \"echo '{0}' > /etc/varnish/default.vcl && service varnish reload\""
+        cmd = cmd.format(api.vcl_template.format(app_ip))
         expected = ["ssh", si_ip, "-l", "ubuntu", "-o", "StrictHostKeyChecking no", cmd]
         cmd_arg = sp_mock.call_args_list[0][0][0]
         self.assertEqual(expected, cmd_arg)
@@ -268,7 +275,8 @@ class UnbindTestCase(unittest.TestCase):
         self.api.delete("/resources/si_name/hostname/10.1.1.2")
         sp_mock.return_value = 0
         self.assertTrue(sp_mock.called)
-        cmd = "sudo bash -c \"echo '{0}' > /etc/varnish/default.vcl && service varnish reload\"".format(api.vcl_template.format("localhost"))
+        cmd = "sudo bash -c \"echo '{0}' > /etc/varnish/default.vcl && service varnish reload\""
+        cmd = cmd.format(api.vcl_template.format("localhost"))
         expected = ["ssh", si_ip, "-l", "ubuntu", cmd]
         cmd_arg = sp_mock.call_args_list[0][0][0]
         self.assertEqual(expected, cmd_arg)

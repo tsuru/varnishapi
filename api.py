@@ -94,25 +94,37 @@ def _rand_stdout_filename(salt):
 
 def _clean_vcl_file(instance_address):
     out = file(_rand_stdout_filename(instance_address), "w+")
-    cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'.format(vcl_template.format("localhost"))
-    exit_status = subprocess.call(["ssh", instance_address, "-l", "ubuntu", cmd], stdout=out, stderr=subprocess.STDOUT)
+    cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'
+    cmd = cmd.format(vcl_template.format("localhost"))
+    exit_status = subprocess.call(["ssh", instance_address, "-l", "ubuntu", cmd],
+                                  stdout=out,
+                                  stderr=subprocess.STDOUT)
     out.seek(0)
     out = out.read()
     syslog.syslog(syslog.LOG_ERR, out)
     if exit_status != 0:
-        raise Exception("Unable to clean vcl file from instance with ip {0}. Error was: {1}".format(instance_address, out))
+        msg = "Unable to clean vcl file from instance with ip {0}. Error was: {1}"
+        msg = msg.format(instance_address, out)
+        raise Exception(msg)
 
 
 def _update_vcl_file(instance_address, app_address):
     out = file(_rand_stdout_filename(instance_address), "w+")
-    cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'.format(vcl_template.format(app_address))
-    exit_status = subprocess.call(["ssh", instance_address, "-l", "ubuntu", "-o", "StrictHostKeyChecking no", cmd], stdout=out, stderr=subprocess.STDOUT)
+    cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'
+    cmd = cmd.format(vcl_template.format(app_address))
+    exit_status = subprocess.call(["ssh", instance_address, "-l", "ubuntu",
+                                   "-o", "StrictHostKeyChecking no", cmd],
+                                  stdout=out,
+                                  stderr=subprocess.STDOUT)
     out.seek(0)
     out = out.read()
     syslog.syslog(syslog.LOG_ERR, out)
     if exit_status != 0:
-        syslog.syslog(syslog.LOG_ERR, "Unable to update vcl file from instance with ip {0}. Error was: {1}".format(instance_address, out))
-        raise Exception("Caught problem while logging in in service VM. Please try again in a minute...")
+        msg = "Unable to update vcl file from instance with ip {0}. Error was: {1}"
+        msg = msg.format(instance_address, out)
+        syslog.syslog(syslog.LOG_ERR, msg)
+        exc_msg = "Caught problem while logging in in service VM. Please try again in a minute..."
+        raise Exception(exc_msg)
 
 
 def _delete_from_database(name):
