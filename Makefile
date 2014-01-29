@@ -7,3 +7,6 @@ test_deps:
 
 test: test_deps
 	python -m unittest discover
+
+flake8:
+	flake8 --max-line-length=99 .
