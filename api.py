@@ -7,9 +7,9 @@ import os
 import sqlite3
 import subprocess
 import syslog
-from md5 import md5
+
 from flask import Flask, request
-from boto.ec2.elb import HealthCheck
+from md5 import md5
 
 api = Flask(__name__)
 access_key = os.environ.get("EC2_ACCESS_KEY")
@@ -17,7 +17,6 @@ secret_key = os.environ.get("EC2_SECRET_KEY")
 region = os.environ.get("EC2_REGION", "sa-east-1")
 ami_id = os.environ.get("AMI_ID")
 subnet_id = os.environ.get("SUBNET_ID")
-elb_scheme = os.environ.get("ELB_SCHEME", "internet-facing")
 key_path = os.environ.get("KEY_PATH", os.path.expanduser("~/.ssh/id_rsa.pub"))
 default_db_name = "varnishapi.db"
 vcl_template = """backend default {{
@@ -32,9 +31,7 @@ def create_instance():
     try:
         name = request.form.get("name")  # check if name is present
         reservation = _create_ec2_instance()
-        elb = _create_elb(name)
-        _register_instance_with_lb(elb, reservation)
-        _store_instance_and_app(reservation, name, elb.dns_name)
+        _store_instance_and_app(reservation, name)
     except Exception as e:
         syslog.syslog("Caught error while creating service instance:")
         syslog.syslog(e.message)
@@ -47,7 +44,6 @@ def delete_instance(name):
     instance_id = _get_instance_id(service_instance=name)
     _delete_ec2_instance(instance_id=instance_id)
     _delete_from_database(name)
-    _delete_elb(name)
     return "", 200
 
 
@@ -70,13 +66,13 @@ def unbind(name, host):
 
 @api.route("/resources/<name>", methods=["GET"])
 def info(name):
-    dns = _get_elb_dns(name)
+    dns = _get_instance_dns(name)
     return json.dumps([{"label": "DNS Name", "value": dns}]), 200
 
 
-def _get_elb_dns(name):
+def _get_instance_dns(name):
     c = conn.cursor()
-    c.execute("select elb_dns_name from instance_app where app_name=?", [name])
+    c.execute("select dns_name from instance_app where app_name=?", [name])
     result = c.fetchall()
     if len(result) == 1 and len(result[0]) == 1:
         return result[0][0]
@@ -155,38 +151,6 @@ ssh_authorized_keys: ['{0}']
     return reservation
 
 
-def _create_elb(name):
-    conn = _elb_connection()
-    listeners = [(80, 80, "HTTP")]
-    elb = conn.create_load_balancer(name=name, zones=[],  # zone from env?
-                                     listeners=listeners, subnets=[subnet_id],
-                                     scheme=elb_scheme)
-    hc = HealthCheck(
-        interval=20,
-        healthy_threshold=3,
-        unhealthy_threshold=5,
-        target='TCP:80'  # use real healthcheck (#10)
-    )
-    elb.configure_health_check(hc)
-    return elb
-
-
-def _register_instance_with_lb(elb, reservation):
-    elb.register_instances(instances=[reservation.instances[0].id])
-
-
-def _delete_elb(name):
-    conn = _elb_connection()
-    conn.delete_load_balancer(name=name)
-
-
-def _elb_connection():
-    from boto.ec2 import elb
-    return elb.connect_to_region(region,
-                                 aws_access_key_id=access_key,
-                                 aws_secret_access_key=secret_key)
-
-
 def _ec2_connection():
     from boto import ec2
     return ec2.connect_to_region(region,
@@ -194,10 +158,10 @@ def _ec2_connection():
                                  aws_secret_access_key=secret_key)
 
 
-def _store_instance_and_app(reservation, app_name, elb_dns_name):
+def _store_instance_and_app(reservation, app_name):
     instance_apps = []
     for i in reservation.instances:
-        instance_apps.append((i.id, app_name, elb_dns_name))
+        instance_apps.append((i.id, app_name, i.dns_name))
     c = conn.cursor()
     c.executemany("insert into instance_app values (?, ?, ?)", instance_apps)
     conn.commit()

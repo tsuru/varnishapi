@@ -33,8 +33,11 @@ class TestHelper(object):
 
     def fake_reservation(self):
         Reservation = namedtuple("Reservation", ["instances"])
-        Instance = namedtuple("Instance", ["id", "private_ip_address"])
-        return Reservation(instances=[Instance(id="i-1", private_ip_address="192.169.56.101")])
+        Instance = namedtuple("Instance", ["id", "private_ip_address", "dns_name"])
+        return Reservation(instances=[Instance(id="i-1",
+                                               private_ip_address="192.169.56.101",
+                                               dns_name="fakeinstance.amazonaws.com",
+                                               )])
 
 
 class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
@@ -69,22 +72,19 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
         DatabaseTest.tearDownClass()
 
     @patch("boto.ec2.connect_to_region")
-    @patch("boto.ec2.elb.connect_to_region")
-    def test_create_instance_should_return_201(self, elb_mock, mock):
+    def test_create_instance_should_return_201(self, mock):
         resp = self.api.post("/resources", data={"name": "someapp"})
         self.assertEqual(resp.status_code, 201)
 
     @patch("boto.ec2.connect_to_region")
-    @patch("boto.ec2.elb.connect_to_region")
-    def test_should_connect_with_ec2_using_environment_variables(self, elb_mock, mock):
+    def test_should_connect_with_ec2_using_environment_variables(self, mock):
         self.api.post("/resources", data={"name": "someapp"})
         mock.assert_called_once_with("sa-east-1",
                                      aws_access_key_id=api.access_key,
                                      aws_secret_access_key=api.secret_key)
 
     @patch("boto.ec2.connect_to_region")
-    @patch("boto.ec2.elb.connect_to_region")
-    def test_should_create_instance_on_ec2(self, elb_mock, mock):
+    def test_should_create_instance_on_ec2(self, mock):
         instance = mock.return_value
         r = self.helper.fake_reservation()
         instance.run_instances.return_value = r
@@ -92,8 +92,7 @@ class CreateInstanceTestCase(DatabaseTest, unittest.TestCase):
         self.assertTrue(instance.run_instances.called)
 
     @patch("boto.ec2.connect_to_region")
-    @patch("boto.ec2.elb.connect_to_region")
-    def test_should_create_instance_on_ec2_using_subnet_and_ami_defined_in_env_var_and_user_data(self, elb_mock, mock):
+    def test_should_create_instance_on_ec2_using_subnet_and_ami_defined_in_env_var_and_user_data(self, mock):
         instance = mock.return_value
         self.api.post("/resources", data={"name": "someapp"})
         f = open(api.key_path)
@@ -105,55 +104,26 @@ ssh_authorized_keys: ['{0}']
         instance.run_instances.assert_called_once_with(image_id=api.ami_id, subnet_id=api.subnet_id, user_data=user_data)
 
     @patch("boto.ec2.connect_to_region")
-    @patch("api._create_elb")
-    def test_should_store_instance_id_app_and_elb_dns_name_on_database(self, elb_mock, mock):
+    def test_should_store_instance_id_app_and_dns_name_on_database(self, mock):
         instance = mock.return_value
         r = self.helper.fake_reservation()
         instance.run_instances.return_value = r
-        elb_mock.return_value = Mock(dns_name="elb-dns-name.elb.amazon.com")
         self.api.post("/resources", data={"name": "someapp"})
         c = api.conn.cursor()
         c.execute("select * from instance_app;")
         result = c.fetchall()
-        expected = [("i-1", "someapp", "elb-dns-name.elb.amazon.com")]
+        expected = [("i-1", "someapp", "fakeinstance.amazonaws.com")]
         self.assertListEqual(expected, result)
 
     @patch("boto.ec2.connect_to_region")
-    @patch("boto.ec2.elb.connect_to_region")
     @patch("syslog.syslog")
-    def test_should_log_error_when_cannot_create_ec2_instance(self, log_mock, elb_mock, ec2_mock):
+    def test_should_log_error_when_cannot_create_ec2_instance(self, log_mock, ec2_mock):
         instance = ec2_mock.return_value
         instance.run_instances.side_effect = Exception("BoOm!")
         resp = self.api.post("/resources", data={"name": "someapp"})
         self.assertEqual(500, resp.status_code)
         self.assertEqual("Caught error while creating service instance.", resp.data)
         self.assertEqual(4, log_mock.call_count)
-
-    @patch("boto.ec2.connect_to_region")
-    @patch("boto.ec2.elb.connect_to_region")
-    def test_should_create_a_load_balancer(self, elb_mock, ec2_mock):
-        instance = elb_mock.return_value
-        lb = Mock()
-        instance.create_load_balancer.return_value = lb
-        self.api.post("/resources", data={"name": "someapp"})
-        elb_mock.assert_called_once_with("sa-east-1", aws_access_key_id=api.access_key, aws_secret_access_key=api.secret_key)
-        instance.create_load_balancer.assert_called_once_with(name="someapp", zones=[],
-                                                              listeners=[(80,80,"HTTP")],
-                                                              subnets=[api.subnet_id],
-                                                              scheme=api.elb_scheme)
-        self.assertEqual(1, lb.configure_health_check.call_count)
-
-    @patch("boto.ec2.connect_to_region")
-    @patch("boto.ec2.elb.connect_to_region")
-    def test_should_register_service_ec2_instance_with_load_balancer(self, elb_mock, ec2_mock):
-        ec2_instance = ec2_mock.return_value
-        r = self.helper.fake_reservation()
-        ec2_instance.run_instances.return_value = r
-        lb = Mock()
-        instance = elb_mock.return_value
-        instance.create_load_balancer.return_value = lb
-        self.api.post("/resources", data={"name": "someapp"})
-        lb.register_instances.assert_called_once_with(instances=["i-1"])
 
 
 class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
@@ -178,15 +148,13 @@ class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
 
     @patch("boto.ec2.connect_to_region")
     @patch("api._get_instance_id")
-    @patch("boto.ec2.elb.connect_to_region")
-    def test_should_get_and_be_success(self, elb_mock, mock, ec2_mock):
+    def test_should_get_and_be_success(self, mock, ec2_mock):
         mock.return_value = ["i-1"]
         r = self.api.delete("/resources/service_instance_name")
         self.assertEqual(200, r.status_code)
 
     @patch("boto.ec2.connect_to_region")
-    @patch("boto.ec2.elb.connect_to_region")
-    def test_should_call_ec2_terminate_instances(self, elb_mock, mock):
+    def test_should_call_ec2_terminate_instances(self, mock):
         instance = mock.return_value
         instance.terminate_instances.return_value = ["i-1"]
         c = api.conn.cursor()
@@ -195,21 +163,13 @@ class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
         instance.terminate_instances.assert_called_once_with(instance_ids=["i-1"])
 
     @patch("boto.ec2.connect_to_region")
-    @patch("boto.ec2.elb.connect_to_region")
-    def test_should_remove_record_from_the_database(self, elb_mock, mock):
+    def test_should_remove_record_from_the_database(self, mock):
         c = api.conn.cursor()
         c.execute("insert into instance_app values ('i-1', 'si_name', 'elb-dns.elb.amazon.com')")
         self.api.delete("/resources/si_name")
         c.execute("select * from instance_app where app_name='si_name'")
         results = c.fetchall()
         self.assertListEqual([], results)
-
-    @patch("boto.ec2.connect_to_region")
-    @patch("boto.ec2.elb.connect_to_region")
-    def test_should_remove_elb(self, elb_mock, ec2_mock):
-        instance = elb_mock.return_value
-        self.api.delete("/resources/si_name")
-        instance.delete_load_balancer.assert_called_once_with(name="si_name")
 
 
 class BindTestCase(unittest.TestCase):
@@ -321,7 +281,7 @@ class InfoTestCase(DatabaseTest, unittest.TestCase):
         cls.api = api.api.test_client()
         DatabaseTest.setUpClass()
 
-    def test_should_return_elb_dns_name_from_database(self):
+    def test_should_return_dns_name_from_database(self):
         dns_name = "elb-dns.elb.amazon.com"
         c = api.conn.cursor()
         c.execute("insert into instance_app values (?, ?, ?)", ["i-1", "si_name", dns_name])
