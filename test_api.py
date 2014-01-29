@@ -345,7 +345,3 @@ class HelpersTestcase(unittest.TestCase):
         got = api._get_database_name()
         self.assertEqual(os.environ["DB_PATH"], got)
         del os.environ["DB_PATH"]
-
-
-if __name__ == "__main__":
-    unittest.main()
