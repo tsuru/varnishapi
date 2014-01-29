@@ -3,4 +3,4 @@
 # license that can be found in the LICENSE file.
 
 test:
-	python -m unittest discover
+	@python -m unittest discover
