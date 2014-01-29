@@ -1,6 +1,8 @@
 Varnish service API for tsuru PaaS
 ==================================
 
+[![Build Status](https://travis-ci.org/globocom/varnishapi.png?branch=master)](https://travis-ci.org/globocom/varnishapi)
+
 Required Tools
 --------------
 
