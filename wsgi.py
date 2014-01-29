@@ -2,4 +2,6 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-from api import api as application
+from api import api
+
+application = api
