@@ -8,5 +8,10 @@ test_deps:
 test: test_deps
 	python -m unittest discover
 
+coverage: test_deps
+	coverage run --source=. -m unittest discover
+	coverage report -m --omit=test\*,wsgi\*
+	rm .coverage
+
 flake8:
 	flake8 --max-line-length=99 .
