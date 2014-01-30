@@ -7,6 +7,7 @@ import os
 import sqlite3
 import subprocess
 import syslog
+import urlparse
 
 from flask import Flask, request
 from md5 import md5
@@ -14,7 +15,7 @@ from md5 import md5
 api = Flask(__name__)
 access_key = os.environ.get("EC2_ACCESS_KEY")
 secret_key = os.environ.get("EC2_SECRET_KEY")
-region = os.environ.get("EC2_REGION", "sa-east-1")
+endpoint = os.environ.get("EC2_ENDPOINT", "https://ec2.sa-east-1.amazonaws.com")
 ami_id = os.environ.get("AMI_ID")
 subnet_id = os.environ.get("SUBNET_ID")
 key_path = os.environ.get("KEY_PATH", os.path.expanduser("~/.ssh/id_rsa.pub"))
@@ -165,9 +166,20 @@ ssh_authorized_keys: ['{0}']
 
 def _ec2_connection():
     from boto import ec2
-    return ec2.connect_to_region(region,
-                                 aws_access_key_id=access_key,
-                                 aws_secret_access_key=secret_key)
+    url = urlparse.urlparse(endpoint)
+    scheme = url.scheme
+    host_port = url.netloc.split(":")
+    host = host_port[0]
+    if len(host_port) > 1:
+        port = int(host_port[1])
+    else:
+        port = 80 if scheme == "http" else 443
+    path = url.path or "/"
+    return ec2.EC2Connection(aws_access_key_id=access_key,
+                             aws_secret_access_key=secret_key,
+                             host=host, port=port,
+                             is_secure=scheme == "https",
+                             path=path)
 
 
 def _store_instance_and_app(reservation, app_name):
