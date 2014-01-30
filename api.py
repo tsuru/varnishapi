@@ -7,10 +7,10 @@ import os
 import sqlite3
 import subprocess
 import syslog
+import tempfile
 import urlparse
 
 from flask import Flask, request
-from md5 import md5
 
 api = Flask(__name__)
 access_key = os.environ.get("EC2_ACCESS_KEY")
@@ -88,13 +88,8 @@ def _get_instance_ip(instance_id):
     return reservations[0].instances[0].private_ip_address
 
 
-def _rand_stdout_filename(salt):
-    tail = md5(salt).hexdigest()
-    return "/tmp/varnish-out-{0}".format(tail)
-
-
 def _clean_vcl_file(instance_address):
-    out = file(_rand_stdout_filename(instance_address), "w+")
+    out = tempfile.TemporaryFile("w+")
     cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'
     cmd = cmd.format(vcl_template.format("localhost"))
     exit_status = subprocess.call(["ssh", instance_address, "-l", "ubuntu", cmd],
@@ -110,7 +105,7 @@ def _clean_vcl_file(instance_address):
 
 
 def _update_vcl_file(instance_address, app_address):
-    out = file(_rand_stdout_filename(instance_address), "w+")
+    out = tempfile.TemporaryFile("w+")
     cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'
     cmd = cmd.format(vcl_template.format(app_address))
     exit_status = subprocess.call(["ssh", instance_address, "-l", "ubuntu",
