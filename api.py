@@ -32,7 +32,7 @@ def create_instance():
     try:
         name = request.form.get("name")  # check if name is present
         reservation = _create_ec2_instance()
-        _store_instance_and_app(reservation, name)
+        _store_instance(reservation, name)
     except Exception as e:
         syslog.syslog("Caught error while creating service instance:")
         syslog.syslog(e.message)
@@ -177,10 +177,10 @@ def _ec2_connection():
                              path=path)
 
 
-def _store_instance_and_app(reservation, app_name):
+def _store_instance(reservation, name):
     instance_apps = []
     for i in reservation.instances:
-        instance_apps.append((i.id, app_name, i.dns_name))
+        instance_apps.append((i.id, name, i.dns_name))
     c = conn.cursor()
     c.executemany("insert into instance_app values (?, ?, ?)", instance_apps)
     conn.commit()
