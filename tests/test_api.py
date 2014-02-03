@@ -2,12 +2,14 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-import api
 import json
 import os
 import unittest
+
 from mock import patch
 from collections import namedtuple
+
+from varnishapi import api
 
 
 class DatabaseTest(object):
@@ -16,7 +18,9 @@ class DatabaseTest(object):
     def setUpClass(cls):
         os.environ["DB_PATH"] = ":memory:"
         reload(api)
-        sql_path = os.path.realpath(os.path.join(__file__, "../database.sql"))
+        mydir = os.path.dirname(__file__)
+        sql_path = os.path.realpath(os.path.join(mydir, "..",
+                                                 "database.sql"))
         f = open(sql_path)
         sql = f.read().replace("\n", "")
         c = api.conn.cursor()
@@ -214,7 +218,7 @@ class DeleteInstanceTestCase(DatabaseTest, unittest.TestCase):
         c.execute("delete from instance_app;")
 
     @patch("boto.ec2.EC2Connection")
-    @patch("api._get_instance_id")
+    @patch("varnishapi.api._get_instance_id")
     def test_should_get_and_be_success(self, mock, ec2_mock):
         mock.return_value = ["i-1"]
         r = self.api.delete("/resources/service_instance_name")
@@ -256,7 +260,7 @@ class BindTestCase(unittest.TestCase):
 
     @patch("subprocess.call")
     @patch("boto.ec2.EC2Connection")
-    @patch("api._get_instance_id")
+    @patch("varnishapi.api._get_instance_id")
     def test_should_get_instance_id_from_database(self, mock, ec2_mock, sp_mock):
         sp_mock.return_value = 0
         mock.return_value = "i-1"
@@ -266,7 +270,7 @@ class BindTestCase(unittest.TestCase):
 
     @patch("subprocess.call")
     @patch("boto.ec2.EC2Connection")
-    @patch("api._get_instance_id")
+    @patch("varnishapi.api._get_instance_id")
     def test_should_get_instance_ip_from_amazon(self, mock, ec2_mock, sp_mock):
         sp_mock.return_value = 0
         mock.return_value = "i-1"
@@ -277,8 +281,8 @@ class BindTestCase(unittest.TestCase):
 
     @patch("subprocess.call")
     @patch("boto.ec2.EC2Connection")
-    @patch("api._get_instance_ip")
-    @patch("api._get_instance_id")
+    @patch("varnishapi.api._get_instance_ip")
+    @patch("varnishapi.api._get_instance_id")
     def test_should_ssh_into_service_instance_and_update_vcl_file_using_template(self,
                                                                                  mock,
                                                                                  ip_mock,
@@ -313,17 +317,17 @@ class UnbindTestCase(unittest.TestCase):
         del os.environ["EC2_SECRET_KEY"]
 
     @patch("boto.ec2.EC2Connection")
-    @patch("api._get_instance_id")
-    @patch("api._clean_vcl_file")
+    @patch("varnishapi.api._get_instance_id")
+    @patch("varnishapi.api._clean_vcl_file")
     def test_unbind_should_get_instance_id(self, vcl_mock, mock, ec2_mock):
         resp = self.api.delete("/resources/si_name/hostname/10.1.1.2")
         self.assertEqual(200, resp.status_code)
         mock.assert_called_once_with(service_instance="si_name")
 
     @patch("boto.ec2.EC2Connection")
-    @patch("api._get_instance_id")
-    @patch("api._get_instance_ip")
-    @patch("api._clean_vcl_file")
+    @patch("varnishapi.api._get_instance_id")
+    @patch("varnishapi.api._get_instance_ip")
+    @patch("varnishapi.api._clean_vcl_file")
     def test_unbind_should_get_instance_ip(self, vcl_mock, mock, id_mock, ec2_mock):
         id_mock.return_value = "i-1"
         resp = self.api.delete("/resources/si_name/hostname/10.1.1.2")
@@ -331,8 +335,8 @@ class UnbindTestCase(unittest.TestCase):
         mock.assert_called_once_with(instance_id="i-1")
 
     @patch("boto.ec2.EC2Connection")
-    @patch("api._get_instance_id")
-    @patch("api._get_instance_ip")
+    @patch("varnishapi.api._get_instance_id")
+    @patch("varnishapi.api._get_instance_ip")
     @patch("subprocess.call")
     def test_should_clear_vcl_file(self, sp_mock, ip_mock, id_mock, ec2_mock):
         si_ip = "10.2.2.1"
@@ -369,7 +373,9 @@ class HelpersTestcase(unittest.TestCase):
     def test_get_database_name_should_return_absolute_path_to_it(self):
         del os.environ["DB_PATH"]
         db_name = api._get_database_name()
-        expected = os.path.realpath(os.path.join(__file__, "../", api.default_db_name))
+        mydir = os.path.dirname(__file__)
+        expected = os.path.realpath(os.path.join(mydir, "..", "varnishapi",
+                                                 api.default_db_name))
         self.assertEqual(expected, db_name)
 
     def test_get_database_name_should_use_DB_PATH_env_var_when_its_set(self):
