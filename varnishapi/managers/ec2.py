@@ -1,0 +1,71 @@
+# Copyright 2014 varnishapi authors. All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+import os
+import urlparse
+import syslog
+
+
+class EC2Manager(object):
+
+    def __init__(self):
+        self._connection = None
+
+    @property
+    def connection(self):
+        if not self._connection:
+            self._connection = self._connect()
+        return self._connection
+
+    def _connect(self):
+        endpoint = os.environ.get("EC2_ENDPOINT", "https://ec2.sa-east-1.amazonaws.com")
+        access_key = os.environ.get("EC2_ACCESS_KEY")
+        secret_key = os.environ.get("EC2_SECRET_KEY")
+        from boto import ec2
+        url = urlparse.urlparse(endpoint)
+        scheme = url.scheme
+        host_port = url.netloc.split(":")
+        host = host_port[0]
+        if len(host_port) > 1:
+            port = int(host_port[1])
+        else:
+            port = 80 if scheme == "http" else 443
+        path = url.path or "/"
+        return ec2.EC2Connection(aws_access_key_id=access_key,
+                                 aws_secret_access_key=secret_key,
+                                 host=host, port=port,
+                                 is_secure=scheme == "https",
+                                 path=path)
+
+    def add_instance(self, name):
+        key_path = os.environ.get("KEY_PATH", os.path.expanduser("~/.ssh/id_rsa.pub"))
+        ami_id = os.environ.get("AMI_ID")
+        subnet_id = os.environ.get("SUBNET_ID")
+        key = ""
+        with open(key_path) as key_file:
+            key = key_file.read()
+        user_data = """#cloud-config
+ssh_authorized_keys: ['{0}']
+""".format(key)
+        reservation = None
+        try:
+            reservation = self.connection.run_instances(image_id=ami_id,
+                                                        subnet_id=subnet_id,
+                                                        user_data=user_data)
+        except Exception as e:
+            syslog.syslog(syslog.LOG_ERR, "Got error while creating EC2 instance:")
+            syslog.syslog(syslog.LOG_ERR, e.message)
+        return reservation
+
+    def bind(self, name):
+        pass
+
+    def unbind(self):
+        pass
+
+    def remove_instance(self, name):
+        pass
+
+    def is_ok(self):
+        return True, ""
