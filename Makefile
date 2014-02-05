@@ -10,7 +10,7 @@ test: test_deps
 
 coverage: test_deps
 	coverage run --source=. -m unittest discover
-	coverage report -m --omit=test\*,wsgi\*
+	coverage report -m --omit=test\*
 	rm .coverage
 
 flake8:
