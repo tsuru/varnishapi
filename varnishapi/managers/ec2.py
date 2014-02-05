@@ -57,7 +57,9 @@ ssh_authorized_keys: ['{0}']
                                                         subnet_id=subnet_id,
                                                         user_data=user_data)
             for instance in reservation.instances:
-                self.storage.store(instance.id, instance.dns_name)
+                self.storage.store(instance_id=instance.id,
+                                   dns_name=instance.dns_name,
+                                   name=name)
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, "Failed to create EC2 instance: %s" %
                           e.message)
@@ -70,7 +72,13 @@ ssh_authorized_keys: ['{0}']
         pass
 
     def remove_instance(self, name):
-        pass
+        instance_id = self.storage.retrieve(name=name)
+        try:
+            self.connection.terminate_instances(instance_ids=[instance_id])
+            self.storage.remove(name=name)
+        except Exception as e:
+            syslog.syslog(syslog.LOG_ERR, "Failed to terminate EC2 instance: %s" %
+                          e.message)
 
     def is_ok(self):
         return True, ""

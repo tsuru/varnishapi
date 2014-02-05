@@ -107,7 +107,7 @@ ssh_authorized_keys: ['{0}']
                                                    user_data=user_data)
 
     @patch("syslog.syslog")
-    def test_add_instances_ec2_failure(self, syslog_mock):
+    def test_add_instance_ec2_failure(self, syslog_mock):
         import syslog as original_syslog
         conn = Mock()
         conn.run_instances.side_effect = ValueError("Something went wrong")
@@ -117,7 +117,7 @@ ssh_authorized_keys: ['{0}']
         msg = "Failed to create EC2 instance: Something went wrong"
         syslog_mock.assert_called_with(original_syslog.LOG_ERR, msg)
 
-    def test_add_instances_with_storage(self):
+    def test_add_instance_with_storage(self):
         conn = Mock()
         conn.run_instances.return_value = self.get_fake_reservation(
             instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
@@ -126,7 +126,31 @@ ssh_authorized_keys: ['{0}']
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         manager.add_instance("someapp")
-        storage.store.assert_called_with("i-800", "abcd.amazonaws.com")
+        storage.store.assert_called_with(instance_id="i-800",
+                                         dns_name="abcd.amazonaws.com",
+                                         name="someapp")
+
+    def test_remove_instance(self):
+        conn = Mock()
+        storage = Mock()
+        storage.retrieve.return_value = "i-0800"
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        manager.remove_instance("someapp")
+        conn.terminate_instances.assert_called_with(instance_ids=["i-0800"])
+        storage.retrieve.assert_called_with(name="someapp")
+        storage.remove.assert_called_with(name="someapp")
+
+    @patch("syslog.syslog")
+    def test_remove_instance_ec2_failure(self, syslog_mock):
+        import syslog as original_syslog
+        conn = Mock()
+        conn.terminate_instances.side_effect = ValueError("Something went wrong")
+        manager = ec2.EC2Manager(Mock())
+        manager._connection = conn
+        manager.remove_instance("someapp")
+        msg = "Failed to terminate EC2 instance: Something went wrong"
+        syslog_mock.assert_called_with(original_syslog.LOG_ERR, msg)
 
     def get_fake_reservation(self, instances):
         reservation = Mock(instances=[])
