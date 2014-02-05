@@ -190,6 +190,50 @@ ssh_authorized_keys: ['{0}']
         self.assertEqual(("Instance not found",),
                          exc.args)
 
+    def test_unbind_instance(self):
+        conn = Mock()
+        conn.get_all_instances.return_value = [self.get_fake_reservation(
+            instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1"}],
+        )]
+        storage = Mock()
+        storage.retrieve.return_value = "i-0800"
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        write_vcl = Mock()
+        manager.write_vcl = write_vcl
+        manager.unbind("someapp", "myapp.cloud.tsuru.io")
+        storage.retrieve.assert_called_with(name="someapp")
+        conn.get_all_instances.assert_called_with(instance_ids=["i-0800"])
+        write_vcl.assert_called_with("10.2.2.1", "localhost")
+
+    def test_unbind_instance_no_reservation(self):
+        conn = Mock()
+        conn.get_all_instances.return_value = []
+        storage = Mock()
+        storage.retrieve.return_value = "i-0800"
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        with self.assertRaises(ValueError) as cm:
+            manager.unbind("someapp", "yourapp.cloud.tsuru.io")
+        exc = cm.exception
+        self.assertEqual(("Instance not found",),
+                         exc.args)
+
+    def test_unbind_instance_instances_not_found(self):
+        conn = Mock()
+        conn.get_all_instances.return_value = [self.get_fake_reservation(
+            instances=[],
+        )]
+        storage = Mock()
+        storage.retrieve.return_value = "i-0800"
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        with self.assertRaises(ValueError) as cm:
+            manager.unbind("someapp", "yourapp.cloud.tsuru.io")
+        exc = cm.exception
+        self.assertEqual(("Instance not found",),
+                         exc.args)
+
     @patch("subprocess.call")
     def test_write_vcl(self, sp_mock):
         sp_mock.return_value = 0

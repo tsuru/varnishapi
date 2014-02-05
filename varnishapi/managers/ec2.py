@@ -94,8 +94,13 @@ ssh_authorized_keys: ['{0}']
             syslog.syslog(syslog.LOG_ERR, msg)
             raise Exception("Could not connect to the service instance")
 
-    def unbind(self):
-        pass
+    def unbind(self, name, app_host):
+        instance_id = self.storage.retrieve(name=name)
+        reservations = self.connection.get_all_instances(instance_ids=[instance_id])
+        if len(reservations) == 0 or len(reservations[0].instances) == 0:
+            raise ValueError("Instance not found")
+        instance_ip = reservations[0].instances[0].private_ip_address
+        self.write_vcl(instance_ip, "localhost")
 
     def remove_instance(self, name):
         instance_id = self.storage.retrieve(name=name)
