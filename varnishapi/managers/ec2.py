@@ -6,11 +6,14 @@ import os
 import urlparse
 import syslog
 
+from varnishapi import storage
+
 
 class EC2Manager(object):
 
-    def __init__(self):
+    def __init__(self, _storage=None):
         self._connection = None
+        self.storage = _storage or storage.DumbStorage()
 
     @property
     def connection(self):
@@ -53,6 +56,8 @@ ssh_authorized_keys: ['{0}']
             reservation = self.connection.run_instances(image_id=ami_id,
                                                         subnet_id=subnet_id,
                                                         user_data=user_data)
+            for instance in reservation.instances:
+                self.storage.store(instance.id, instance.dns_name)
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, "Failed to create EC2 instance: %s" %
                           e.message)
