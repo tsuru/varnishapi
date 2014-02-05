@@ -2,9 +2,17 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+import cStringIO as StringIO
 import os
 import urlparse
+import subprocess
 import syslog
+
+VCL_TEMPLATE = """backend default {{
+    .host = \\"{0}\\";
+    .port = \\"80\\";
+}}
+"""
 
 
 class EC2Manager(object):
@@ -63,8 +71,28 @@ ssh_authorized_keys: ['{0}']
                           e.message)
         return reservation
 
-    def bind(self, name):
-        pass
+    def bind(self, name, app_host):
+        instance_id = self.storage.retrieve(name=name)
+        reservations = self.connection.get_all_instances(instance_ids=[instance_id])
+        if len(reservations) == 0 or len(reservations[0].instances) == 0:
+            raise ValueError("Instance not found")
+        instance_ip = reservations[0].instances[0].private_ip_address
+        self.write_vcl(instance_ip, app_host)
+
+    def write_vcl(self, instance_addr, app_addr):
+        out = StringIO.StringIO()
+        cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'
+        cmd = cmd.format(VCL_TEMPLATE.format(app_addr))
+        exit_status = subprocess.call(["ssh", instance_addr, "-l", "ubuntu",
+                                       "-o", "StrictHostKeyChecking no", cmd],
+                                      stdout=out, stderr=out)
+        out.seek(0)
+        out = out.read()
+        if exit_status != 0:
+            msg = "Failed to write VCL file in the instance {0}: {1}"
+            msg = msg.format(instance_addr, out)
+            syslog.syslog(syslog.LOG_ERR, msg)
+            raise Exception("Could not connect to the service instance")
 
     def unbind(self):
         pass

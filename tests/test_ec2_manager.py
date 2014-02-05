@@ -146,6 +146,100 @@ ssh_authorized_keys: ['{0}']
         msg = "Failed to terminate EC2 instance: Something went wrong"
         syslog_mock.assert_called_with(original_syslog.LOG_ERR, msg)
 
+    def test_bind_instance(self):
+        conn = Mock()
+        conn.get_all_instances.return_value = [self.get_fake_reservation(
+            instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1"}],
+        )]
+        storage = Mock()
+        storage.retrieve.return_value = "i-0800"
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        write_vcl = Mock()
+        manager.write_vcl = write_vcl
+        manager.bind("someapp", "myapp.cloud.tsuru.io")
+        storage.retrieve.assert_called_with(name="someapp")
+        conn.get_all_instances.assert_called_with(instance_ids=["i-0800"])
+        write_vcl.assert_called_with("10.2.2.1", "myapp.cloud.tsuru.io")
+
+    def test_bind_instance_no_reservation(self):
+        conn = Mock()
+        conn.get_all_instances.return_value = []
+        storage = Mock()
+        storage.retrieve.return_value = "i-0800"
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        with self.assertRaises(ValueError) as cm:
+            manager.bind("someapp", "yourapp.cloud.tsuru.io")
+        exc = cm.exception
+        self.assertEqual(("Instance not found",),
+                         exc.args)
+
+    def test_bind_instance_instances_not_found(self):
+        conn = Mock()
+        conn.get_all_instances.return_value = [self.get_fake_reservation(
+            instances=[],
+        )]
+        storage = Mock()
+        storage.retrieve.return_value = "i-0800"
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        with self.assertRaises(ValueError) as cm:
+            manager.bind("someapp", "yourapp.cloud.tsuru.io")
+        exc = cm.exception
+        self.assertEqual(("Instance not found",),
+                         exc.args)
+
+    @patch("subprocess.call")
+    def test_write_vcl(self, sp_mock):
+        sp_mock.return_value = 0
+        app_host = "myapp.cloud.tsuru.io"
+        instance_ip = "10.2.2.1"
+        manager = ec2.EC2Manager(None)
+        manager.write_vcl(instance_ip, app_host)
+        cmd = "sudo bash -c \"echo '{0}' > /etc/varnish/default.vcl && service varnish reload\""
+        cmd = cmd.format(ec2.VCL_TEMPLATE.format(app_host))
+        expected = ["ssh", instance_ip, "-l", "ubuntu", "-o", "StrictHostKeyChecking no", cmd]
+        cmd_arg = sp_mock.call_args_list[0][0][0]
+        self.assertEqual(expected, cmd_arg)
+
+    @patch("subprocess.call")
+    @patch("syslog.syslog")
+    def test_write_vcl_failure_stdout(self, syslog_mock, sp_mock):
+        def side_effect(*args, **kwargs):
+            kwargs["stdout"].write("something went wrong")
+        sp_mock.side_effect = side_effect
+        sp_mock.return_value = 1
+        app_host = "myapp.cloud.tsuru.io"
+        instance_ip = "10.2.2.1"
+        manager = ec2.EC2Manager(None)
+        with self.assertRaises(Exception) as cm:
+            manager.write_vcl(instance_ip, app_host)
+        exc = cm.exception
+        self.assertEqual(("Could not connect to the service instance",),
+                         exc.args)
+        import syslog as original_syslog
+        msg = "Failed to write VCL file in the instance {0}: something went wrong"
+        syslog_mock.assert_called_with(original_syslog.LOG_ERR,
+                                       msg.format(instance_ip))
+
+    @patch("subprocess.call")
+    @patch("syslog.syslog")
+    def test_write_vcl_failure_stderr(self, syslog_mock, sp_mock):
+        def side_effect(*args, **kwargs):
+            kwargs["stderr"].write("something went wrong")
+        sp_mock.side_effect = side_effect
+        sp_mock.return_value = 1
+        app_host = "myapp.cloud.tsuru.io"
+        instance_ip = "10.2.2.1"
+        manager = ec2.EC2Manager(None)
+        with self.assertRaises(Exception):
+            manager.write_vcl(instance_ip, app_host)
+        import syslog as original_syslog
+        msg = "Failed to write VCL file in the instance {0}: something went wrong"
+        syslog_mock.assert_called_with(original_syslog.LOG_ERR,
+                                       msg.format(instance_ip))
+
     def get_fake_reservation(self, instances):
         reservation = Mock(instances=[])
         for instance in instances:
