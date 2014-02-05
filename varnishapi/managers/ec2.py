@@ -54,8 +54,8 @@ ssh_authorized_keys: ['{0}']
                                                         subnet_id=subnet_id,
                                                         user_data=user_data)
         except Exception as e:
-            syslog.syslog(syslog.LOG_ERR, "Got error while creating EC2 instance:")
-            syslog.syslog(syslog.LOG_ERR, e.message)
+            syslog.syslog(syslog.LOG_ERR, "Failed to create EC2 instance: %s" %
+                          e.message)
         return reservation
 
     def bind(self, name):

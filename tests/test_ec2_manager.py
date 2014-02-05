@@ -105,3 +105,14 @@ ssh_authorized_keys: ['{0}']
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
                                                    user_data=user_data)
+
+    @patch("syslog.syslog")
+    def test_add_instances_ec2_failure(self, syslog_mock):
+        import syslog as original_syslog
+        conn = Mock()
+        conn.run_instances.side_effect = ValueError("Something went wrong")
+        manager = ec2.EC2Manager()
+        manager._connection = conn
+        manager.add_instance("someapp")
+        msg = "Failed to create EC2 instance: Something went wrong"
+        syslog_mock.assert_called_with(original_syslog.LOG_ERR, msg)
