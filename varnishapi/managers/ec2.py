@@ -11,9 +11,9 @@ from varnishapi import storage
 
 class EC2Manager(object):
 
-    def __init__(self, _storage=None):
+    def __init__(self, storage):
         self._connection = None
-        self.storage = _storage or storage.DumbStorage()
+        self.storage = storage
 
     @property
     def connection(self):

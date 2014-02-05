@@ -30,7 +30,7 @@ class EC2ManagerTestCase(unittest.TestCase):
     def test_connection_http(self, ec2_mock):
         os.environ["EC2_ENDPOINT"] = "http://amazonaws.com"
         ec2_mock.return_value = "connection to ec2"
-        conn = ec2.EC2Manager().connection
+        conn = ec2.EC2Manager(None).connection
         self.assertEqual("connection to ec2", conn)
         ec2_mock.assert_called_with(aws_access_key_id=self.access_key,
                                     aws_secret_access_key=self.secret_key,
@@ -43,7 +43,7 @@ class EC2ManagerTestCase(unittest.TestCase):
     def test_connection_https(self, ec2_mock):
         os.environ["EC2_ENDPOINT"] = "https://amazonaws.com"
         ec2_mock.return_value = "connection to ec2"
-        conn = ec2.EC2Manager().connection
+        conn = ec2.EC2Manager(None).connection
         self.assertEqual("connection to ec2", conn)
         ec2_mock.assert_called_with(aws_access_key_id=self.access_key,
                                     aws_secret_access_key=self.secret_key,
@@ -56,7 +56,7 @@ class EC2ManagerTestCase(unittest.TestCase):
     def test_ec2_connection_http_custom_port(self, ec2_mock):
         os.environ["EC2_ENDPOINT"] = "http://amazonaws.com:8080"
         ec2_mock.return_value = "connection to ec2"
-        conn = ec2.EC2Manager().connection
+        conn = ec2.EC2Manager(None).connection
         self.assertEqual("connection to ec2", conn)
         ec2_mock.assert_called_with(aws_access_key_id=self.access_key,
                                     aws_secret_access_key=self.secret_key,
@@ -69,7 +69,7 @@ class EC2ManagerTestCase(unittest.TestCase):
     def test_ec2_connection_https_custom_port(self, ec2_mock):
         os.environ["EC2_ENDPOINT"] = "https://amazonaws.com:8080"
         ec2_mock.return_value = "connection to ec2"
-        conn = ec2.EC2Manager().connection
+        conn = ec2.EC2Manager(None).connection
         self.assertEqual("connection to ec2", conn)
         ec2_mock.assert_called_with(aws_access_key_id=self.access_key,
                                     aws_secret_access_key=self.secret_key,
@@ -82,7 +82,7 @@ class EC2ManagerTestCase(unittest.TestCase):
     def test_ec2_connection_custom_path(self, ec2_mock):
         os.environ["EC2_ENDPOINT"] = "https://amazonaws.com:8080/something"
         ec2_mock.return_value = "connection to ec2"
-        result = ec2.EC2Manager().connection
+        result = ec2.EC2Manager(None).connection
         self.assertEqual("connection to ec2", result)
         ec2_mock.assert_called_with(aws_access_key_id=self.access_key,
                                     aws_secret_access_key=self.secret_key,
@@ -93,7 +93,11 @@ class EC2ManagerTestCase(unittest.TestCase):
 
     def test_add_instances_ec2_parameters(self):
         conn = Mock()
-        manager = ec2.EC2Manager()
+        conn.run_instances.return_value = self.get_fake_reservation(
+            instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
+        )
+        storage = Mock()
+        manager = ec2.EC2Manager(storage)
         manager._connection = conn
         manager.add_instance("someapp")
         f = open(self.key_path)
@@ -105,30 +109,20 @@ ssh_authorized_keys: ['{0}']
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
                                                    user_data=user_data)
+        storage.store.assert_called_with(instance_id="i-800",
+                                         dns_name="abcd.amazonaws.com",
+                                         name="someapp")
 
     @patch("syslog.syslog")
     def test_add_instance_ec2_failure(self, syslog_mock):
         import syslog as original_syslog
         conn = Mock()
         conn.run_instances.side_effect = ValueError("Something went wrong")
-        manager = ec2.EC2Manager()
+        manager = ec2.EC2Manager(None)
         manager._connection = conn
         manager.add_instance("someapp")
         msg = "Failed to create EC2 instance: Something went wrong"
         syslog_mock.assert_called_with(original_syslog.LOG_ERR, msg)
-
-    def test_add_instance_with_storage(self):
-        conn = Mock()
-        conn.run_instances.return_value = self.get_fake_reservation(
-            instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
-        )
-        storage = Mock()
-        manager = ec2.EC2Manager(storage)
-        manager._connection = conn
-        manager.add_instance("someapp")
-        storage.store.assert_called_with(instance_id="i-800",
-                                         dns_name="abcd.amazonaws.com",
-                                         name="someapp")
 
     def test_remove_instance(self):
         conn = Mock()
