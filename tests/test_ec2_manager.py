@@ -91,7 +91,7 @@ class EC2ManagerTestCase(unittest.TestCase):
                                     path="/something",
                                     is_secure=True)
 
-    def test_add_instances_ec2_parameters(self):
+    def test_add_instance(self):
         conn = Mock()
         conn.run_instances.return_value = self.get_fake_reservation(
             instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
