@@ -6,8 +6,6 @@ import os
 import urlparse
 import syslog
 
-from varnishapi import storage
-
 
 class EC2Manager(object):
 
