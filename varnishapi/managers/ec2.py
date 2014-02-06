@@ -112,7 +112,7 @@ ssh_authorized_keys: ['{0}']
                           e.message)
 
     def info(self, name):
-        return self.storage.retrieve(name)
+        return self.storage.retrieve(name).to_dict()
 
     def is_ok(self, name):
         instance = self.storage.retrieve(name)

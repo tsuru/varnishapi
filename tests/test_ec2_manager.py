@@ -277,7 +277,7 @@ ssh_authorized_keys: ['{0}']
         storage.retrieve.return_value = instance
         manager = ec2.EC2Manager(storage)
         info = manager.info("secret")
-        self.assertEqual(instance, info)
+        self.assertEqual(instance.to_dict(), info)
         storage.retrieve.assert_called_with("secret")
 
     def test_info_instance_not_found(self):
