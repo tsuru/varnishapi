@@ -10,6 +10,14 @@ from varnishapi import storage
 
 class InstanceTestCase(unittest.TestCase):
 
+    def test_to_dict(self):
+        instance = storage.Instance(name="myinstance",
+                                    dns_name="instance.cloud.tsuru.io",
+                                    id="i-0800")
+        expected = {"id": "i-0800", "dns_name": "instance.cloud.tsuru.io",
+                    "name": "myinstance"}
+        self.assertEqual(expected, instance.to_dict())
+
     def test_to_json(self):
         instance = storage.Instance(name="myinstance",
                                     dns_name="instance.cloud.tsuru.io",
