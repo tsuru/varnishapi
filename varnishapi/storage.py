@@ -41,7 +41,7 @@ class MongoDBStorage(object):
     def retrieve(self, name):
         instance = self.db[self.collection_name].find_one({"name": name})
         if not instance:
-            raise ValueError("Instance not found")
+            raise InstanceNotFoundError()
         del instance["_id"]
         return Instance(**instance)
 

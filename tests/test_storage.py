@@ -60,11 +60,8 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.assertEqual(expected.to_dict(), got.to_dict())
 
     def test_retrieve_not_found(self):
-        with self.assertRaises(ValueError) as cm:
+        with self.assertRaises(storage.InstanceNotFoundError):
             self.storage.retrieve("secret")
-        exc = cm.exception
-        self.assertEqual(("Instance not found",),
-                         exc.args)
 
     def test_remove(self):
         instance = storage.Instance(id="i-0800", name="years",
