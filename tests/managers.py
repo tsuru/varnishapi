@@ -7,8 +7,9 @@ from varnishapi import storage
 
 class FakeInstance(object):
 
-    def __init__(self, name):
+    def __init__(self, name, state):
         self.name = name
+        self.state = state
         self.bound = []
 
     def bind(self, app_host):
@@ -23,8 +24,8 @@ class FakeManager(object):
     def __init__(self, storage=None):
         self.instances = []
 
-    def add_instance(self, name):
-        self.instances.append(FakeInstance(name))
+    def add_instance(self, name, state="running"):
+        self.instances.append(FakeInstance(name, state))
 
     def bind(self, name, app_host):
         index, instance = self.find_instance(name)
@@ -52,10 +53,10 @@ class FakeManager(object):
         return {"name": instance.name}
 
     def status(self, name):
-        index, _ = self.find_instance(name)
+        index, instance = self.find_instance(name)
         if index < 0:
             raise storage.InstanceNotFoundError()
-        return "running"
+        return instance.state
 
     def find_instance(self, name):
         for i, instance in enumerate(self.instances):
