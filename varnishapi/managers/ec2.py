@@ -83,7 +83,7 @@ ssh_authorized_keys: ['{0}']
         instance = self.storage.retrieve(name=name)
         reservations = self.connection.get_all_instances(instance_ids=[instance.id])
         if len(reservations) == 0 or len(reservations[0].instances) == 0:
-            raise ValueError("Instance not found")
+            raise storage.InstanceNotFoundError()
         instance_ip = reservations[0].instances[0].private_ip_address
         self.write_vcl(instance_ip, backend)
 
@@ -118,7 +118,7 @@ ssh_authorized_keys: ['{0}']
         instance = self.storage.retrieve(name)
         reservations = self.connection.get_all_instances(instance_ids=[instance.id])
         if len(reservations) < 1 or len(reservations[0].instances) < 1:
-            raise ValueError("Instance not found")
+            raise storage.InstanceNotFoundError()
         instance = reservations[0].instances[0]
         if instance.state == "running":
             return True, ""
