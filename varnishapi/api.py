@@ -12,6 +12,8 @@ import urlparse
 
 from flask import Flask, request
 
+from . import storage
+
 api = Flask(__name__)
 access_key = os.environ.get("EC2_ACCESS_KEY")
 secret_key = os.environ.get("EC2_SECRET_KEY")
@@ -38,10 +40,12 @@ def create_instance():
 
 
 @api.route("/resources/<name>", methods=["DELETE"])
-def delete_instance(name):
-    instance_id = _get_instance_id(service_instance=name)
-    _delete_ec2_instance(instance_id=instance_id)
-    _delete_from_database(name)
+def remove_instance(name):
+    manager = get_manager()
+    try:
+        manager.remove_instance(name)
+    except storage.InstanceNotFoundError:
+        return "Instance not found", 404
     return "", 200
 
 

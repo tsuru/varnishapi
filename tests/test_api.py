@@ -2,12 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-import json
-import os
 import unittest
-
-from mock import patch
-from collections import namedtuple
 
 from varnishapi import api
 from . import managers
@@ -34,4 +29,17 @@ class APITestCase(unittest.TestCase):
         resp = self.api.post("/resources", data={"names": "someapp"})
         self.assertEqual(400, resp.status_code)
         self.assertEqual("name is required", resp.data)
+        self.assertEqual([], self.manager.instances)
+
+    def test_remove_instance(self):
+        self.manager.add_instance("someapp")
+        resp = self.api.delete("/resources/someapp")
+        self.assertEqual(200, resp.status_code)
+        self.assertEqual("", resp.data)
+        self.assertEqual([], self.manager.instances)
+
+    def test_remove_instance_not_found(self):
+        resp = self.api.delete("/resources/someapp")
+        self.assertEqual(404, resp.status_code)
+        self.assertEqual("Instance not found", resp.data)
         self.assertEqual([], self.manager.instances)
