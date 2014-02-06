@@ -33,7 +33,10 @@ class FakeManager(object):
         instance.bind(app_host)
 
     def unbind(self, name, app_host):
-        pass
+        index, instance = self.find_instance(name)
+        if index < 0:
+            raise storage.InstanceNotFoundError()
+        instance.unbind(app_host)
 
     def remove_instance(self, name):
         index, _ = self.find_instance(name)
