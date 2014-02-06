@@ -7,6 +7,10 @@ import json
 import pymongo
 
 
+class InstanceNotFoundError(Exception):
+    pass
+
+
 class Instance(object):
 
     def __init__(self, name=None, dns_name=None, id=None):
