@@ -8,6 +8,8 @@ import urlparse
 import subprocess
 import syslog
 
+from varnishapi import storage
+
 VCL_TEMPLATE = """backend default {{
     .host = \\"{0}\\";
     .port = \\"80\\";
@@ -63,9 +65,9 @@ ssh_authorized_keys: ['{0}']
                                                         subnet_id=subnet_id,
                                                         user_data=user_data)
             for instance in reservation.instances:
-                self.storage.store(instance_id=instance.id,
-                                   dns_name=instance.dns_name,
-                                   name=name)
+                self.storage.store(storage.Instance(id=instance.id,
+                                                    dns_name=instance.dns_name,
+                                                    name=name))
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, "Failed to create EC2 instance: %s" %
                           e.message)

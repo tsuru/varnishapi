@@ -110,9 +110,7 @@ ssh_authorized_keys: ['{0}']
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
                                                    user_data=user_data)
-        storage.store.assert_called_with(instance_id="i-800",
-                                         dns_name="abcd.amazonaws.com",
-                                         name="someapp")
+        storage.store.assert_called_once()
 
     @patch("syslog.syslog")
     def test_add_instance_ec2_failure(self, syslog_mock):
