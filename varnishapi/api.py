@@ -29,14 +29,11 @@ vcl_template = """backend default {{
 
 @api.route("/resources", methods=["POST"])
 def create_instance():
-    try:
-        name = request.form.get("name")  # check if name is present
-        reservation = _create_ec2_instance()
-        _store_instance(reservation, name)
-    except Exception as e:
-        syslog.syslog("Caught error while creating service instance:")
-        syslog.syslog(e.message)
-        return "Caught error while creating service instance.", 500
+    name = request.form.get("name")
+    if not name:
+        return "name is required", 400
+    manager = get_manager()
+    manager.add_instance(name)
     return "", 201
 
 
@@ -190,6 +187,10 @@ def _get_database_name():
     if os.environ.get("DB_PATH"):  # this env var must be an absolute path
         return os.environ["DB_PATH"]
     return os.path.realpath(os.path.join(__file__, "../", default_db_name))
+
+
+def get_manager():
+    pass
 
 
 conn = sqlite3.connect(_get_database_name())
