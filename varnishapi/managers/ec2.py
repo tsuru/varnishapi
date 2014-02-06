@@ -114,12 +114,9 @@ ssh_authorized_keys: ['{0}']
     def info(self, name):
         return self.storage.retrieve(name).to_dict()
 
-    def is_ok(self, name):
+    def status(self, name):
         instance = self.storage.retrieve(name)
         reservations = self.connection.get_all_instances(instance_ids=[instance.id])
         if len(reservations) < 1 or len(reservations[0].instances) < 1:
             raise storage.InstanceNotFoundError()
-        instance = reservations[0].instances[0]
-        if instance.state == "running":
-            return True, ""
-        return False, "Instance is {0}".format(instance.state)
+        return reservations[0].instances[0].state
