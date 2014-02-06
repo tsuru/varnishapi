@@ -10,18 +10,6 @@ from flask import Flask, request
 from . import storage
 
 api = Flask(__name__)
-access_key = os.environ.get("EC2_ACCESS_KEY")
-secret_key = os.environ.get("EC2_SECRET_KEY")
-endpoint = os.environ.get("EC2_ENDPOINT", "https://ec2.sa-east-1.amazonaws.com")
-ami_id = os.environ.get("AMI_ID")
-subnet_id = os.environ.get("SUBNET_ID")
-key_path = os.environ.get("KEY_PATH", os.path.expanduser("~/.ssh/id_rsa.pub"))
-default_db_name = "varnishapi.db"
-vcl_template = """backend default {{
-    .host = \\"{0}\\";
-    .port = \\"80\\";
-}}
-"""
 
 
 @api.route("/resources", methods=["POST"])
