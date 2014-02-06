@@ -128,7 +128,7 @@ ssh_authorized_keys: ['{0}']
     def test_remove_instance(self):
         conn = Mock()
         storage = Mock()
-        storage.retrieve.return_value = "i-0800"
+        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         manager.remove_instance("someapp")
@@ -153,7 +153,7 @@ ssh_authorized_keys: ['{0}']
             instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1"}],
         )]
         storage = Mock()
-        storage.retrieve.return_value = "i-0800"
+        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         write_vcl = Mock()
@@ -167,7 +167,7 @@ ssh_authorized_keys: ['{0}']
         conn = Mock()
         conn.get_all_instances.return_value = []
         storage = Mock()
-        storage.retrieve.return_value = "i-0800"
+        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         with self.assertRaises(ValueError) as cm:
@@ -182,7 +182,7 @@ ssh_authorized_keys: ['{0}']
             instances=[],
         )]
         storage = Mock()
-        storage.retrieve.return_value = "i-0800"
+        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         with self.assertRaises(ValueError) as cm:
@@ -197,7 +197,7 @@ ssh_authorized_keys: ['{0}']
             instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1"}],
         )]
         storage = Mock()
-        storage.retrieve.return_value = "i-0800"
+        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         write_vcl = Mock()
@@ -211,7 +211,7 @@ ssh_authorized_keys: ['{0}']
         conn = Mock()
         conn.get_all_instances.return_value = []
         storage = Mock()
-        storage.retrieve.return_value = "i-0800"
+        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         with self.assertRaises(ValueError) as cm:
@@ -226,7 +226,7 @@ ssh_authorized_keys: ['{0}']
             instances=[],
         )]
         storage = Mock()
-        storage.retrieve.return_value = "i-0800"
+        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         with self.assertRaises(ValueError) as cm:

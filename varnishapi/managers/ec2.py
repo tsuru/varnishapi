@@ -78,8 +78,8 @@ ssh_authorized_keys: ['{0}']
         self._set_backend(name, "localhost")
 
     def _set_backend(self, name, backend):
-        instance_id = self.storage.retrieve(name=name)
-        reservations = self.connection.get_all_instances(instance_ids=[instance_id])
+        instance = self.storage.retrieve(name=name)
+        reservations = self.connection.get_all_instances(instance_ids=[instance.id])
         if len(reservations) == 0 or len(reservations[0].instances) == 0:
             raise ValueError("Instance not found")
         instance_ip = reservations[0].instances[0].private_ip_address
@@ -101,9 +101,9 @@ ssh_authorized_keys: ['{0}']
             raise Exception("Could not connect to the service instance")
 
     def remove_instance(self, name):
-        instance_id = self.storage.retrieve(name=name)
+        instance = self.storage.retrieve(name=name)
         try:
-            self.connection.terminate_instances(instance_ids=[instance_id])
+            self.connection.terminate_instances(instance_ids=[instance.id])
             self.storage.remove(name=name)
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, "Failed to terminate EC2 instance: %s" %
