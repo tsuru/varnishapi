@@ -50,10 +50,8 @@ class FakeManager(object):
         return {"name": instance.name}
 
     def is_ok(self, name):
-        for instance in self.instances:
-            if instance.name == name:
-                return True, ""
-        return False, ""
+        index, _ = self.find_instance(name)
+        return index > -1, ""
 
     def find_instance(self, name):
         for i, instance in enumerate(self.instances):
