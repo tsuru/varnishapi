@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+from varnishapi import storage
+
 
 class FakeInstance(object):
 
@@ -31,7 +33,15 @@ class FakeManager(object):
         pass
 
     def remove_instance(self, name):
-        pass
+        index = -1
+        for i, instance in enumerate(self.instances):
+            if instance.name == name:
+                index = i
+                break
+        if index > -1:
+            del self.instances[index]
+        else:
+            raise storage.InstanceNotFoundError()
 
     def info(self, name):
         pass
