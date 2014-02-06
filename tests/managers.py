@@ -46,7 +46,9 @@ class FakeManager(object):
             raise storage.InstanceNotFoundError()
 
     def info(self, name):
-        _, instance = self.find_instance(name)
+        index, instance = self.find_instance(name)
+        if index < 0:
+            raise storage.InstanceNotFoundError()
         return {"name": instance.name}
 
     def is_ok(self, name):
