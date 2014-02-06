@@ -64,9 +64,11 @@ def bind(name):
 
 @api.route("/resources/<name>/hostname/<host>", methods=["DELETE"])
 def unbind(name, host):
-    i_id = _get_instance_id(service_instance=name)
-    i_ip = _get_instance_ip(instance_id=i_id)
-    _clean_vcl_file(instance_address=i_ip)
+    manager = get_manager()
+    try:
+        manager.unbind(name, host)
+    except storage.InstanceNotFoundError:
+        return "Instance not found", 404
     return "", 200
 
 

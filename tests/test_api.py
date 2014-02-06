@@ -64,3 +64,16 @@ class APITestCase(unittest.TestCase):
                              data={"app-host": "someapp.cloud.tsuru.io"})
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
+
+    def test_unbind(self):
+        self.manager.add_instance("someapp")
+        self.manager.bind("someapp", "someapp.cloud.tsuru.io")
+        resp = self.api.delete("/resources/someapp/hostname/someapp.cloud.tsuru.io")
+        self.assertEqual(200, resp.status_code)
+        self.assertEqual("", resp.data)
+        self.assertEqual([], self.manager.instances[0].bound)
+
+    def test_unbind_instance_not_found(self):
+        resp = self.api.delete("/resources/someapp/hostname/someapp.cloud.tsuru.io")
+        self.assertEqual(404, resp.status_code)
+        self.assertEqual("Instance not found", resp.data)
