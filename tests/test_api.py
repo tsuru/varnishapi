@@ -18,6 +18,10 @@ class APITestCase(unittest.TestCase):
         api.get_manager = lambda: cls.manager
         cls.api = api.api.test_client()
 
+    @classmethod
+    def tearDownClass(cls):
+        api.get_manager = cls.old_get_manager
+
     def setUp(self):
         self.manager.reset()
 
