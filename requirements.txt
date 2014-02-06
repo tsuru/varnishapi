@@ -1,3 +1,4 @@
 Flask==0.9
 boto==2.8.0
 gunicorn==0.17.2
+pymongo==2.6.3
