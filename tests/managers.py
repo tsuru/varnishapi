@@ -27,17 +27,16 @@ class FakeManager(object):
         self.instances.append(FakeInstance(name))
 
     def bind(self, name, app_host):
-        pass
+        index, instance = self.find_instance(name)
+        if index < 0:
+            raise storage.InstanceNotFoundError()
+        instance.bind(app_host)
 
     def unbind(self, name, app_host):
         pass
 
     def remove_instance(self, name):
-        index = -1
-        for i, instance in enumerate(self.instances):
-            if instance.name == name:
-                index = i
-                break
+        index, _ = self.find_instance(name)
         if index > -1:
             del self.instances[index]
         else:
@@ -51,6 +50,12 @@ class FakeManager(object):
             if instance.name == name:
                 return True, ""
         return False, ""
+
+    def find_instance(self, name):
+        for i, instance in enumerate(self.instances):
+            if instance.name == name:
+                return i, instance
+        return -1, None
 
     def reset(self):
         self.instances = []
