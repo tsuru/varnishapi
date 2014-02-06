@@ -74,8 +74,11 @@ def unbind(name, host):
 
 @api.route("/resources/<name>", methods=["GET"])
 def info(name):
-    dns = _get_instance_dns(name)
-    return json.dumps([{"label": "DNS Name", "value": dns}]), 200
+    manager = get_manager()
+    try:
+        return json.dumps(manager.info(name)), 200
+    except storage.InstanceNotFoundError:
+        return "Instance not found", 404
 
 
 def _get_instance_dns(name):

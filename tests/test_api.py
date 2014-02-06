@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+import json
 import unittest
 
 from varnishapi import api
@@ -75,5 +76,17 @@ class APITestCase(unittest.TestCase):
 
     def test_unbind_instance_not_found(self):
         resp = self.api.delete("/resources/someapp/hostname/someapp.cloud.tsuru.io")
+        self.assertEqual(404, resp.status_code)
+        self.assertEqual("Instance not found", resp.data)
+
+    def test_info(self):
+        self.manager.add_instance("someapp")
+        resp = self.api.get("/resources/someapp")
+        self.assertEqual(200, resp.status_code)
+        data = json.loads(resp.data)
+        self.assertEqual({"name": "someapp"}, data)
+
+    def test_info_instance_not_found(self):
+        resp = self.api.get("/resources/someapp")
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
