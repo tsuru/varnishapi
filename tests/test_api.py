@@ -43,3 +43,24 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
         self.assertEqual([], self.manager.instances)
+
+    def test_bind(self):
+        self.manager.add_instance("someapp")
+        resp = self.api.post("/resources/someapp",
+                             data={"app-host": "someapp.cloud.tsuru.io"})
+        self.assertEqual(201, resp.status_code)
+        self.assertEqual("null", resp.data)
+        bind = self.manager.instances[0].bound[0]
+        self.assertEqual("someapp.cloud.tsuru.io", bind)
+
+    def test_bind_without_app_host(self):
+        resp = self.api.post("/resources/someapp",
+                             data={"app_hooost": "someapp.cloud.tsuru.io"})
+        self.assertEqual(400, resp.status_code)
+        self.assertEqual("app-host is required", resp.data)
+
+    def test_bind_instance_not_found(self):
+        resp = self.api.post("/resources/someapp",
+                             data={"app-host": "someapp.cloud.tsuru.io"})
+        self.assertEqual(404, resp.status_code)
+        self.assertEqual("Instance not found", resp.data)

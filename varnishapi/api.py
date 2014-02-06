@@ -51,10 +51,14 @@ def remove_instance(name):
 
 @api.route("/resources/<name>", methods=["POST"])
 def bind(name):
-    i_id = _get_instance_id(service_instance=name)
-    i_ip = _get_instance_ip(instance_id=i_id)
-    app_ip = request.form.get("app-host")
-    _update_vcl_file(instance_address=i_ip, app_address=app_ip)
+    app_host = request.form.get("app-host")
+    if not app_host:
+        return "app-host is required", 400
+    manager = get_manager()
+    try:
+        manager.bind(name, app_host)
+    except storage.InstanceNotFoundError:
+        return "Instance not found", 404
     return "null", 201
 
 
