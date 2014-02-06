@@ -296,10 +296,82 @@ ssh_authorized_keys: ['{0}']
 
     def test_info_instance_not_found(self):
         storage = Mock()
-        storage.retrieve.return_value = None
+        storage.retrieve.side_effect = ValueError("Instance not found")
         manager = ec2.EC2Manager(storage)
         with self.assertRaises(ValueError) as cm:
             manager.info("secret")
+        exc = cm.exception
+        self.assertEqual(("Instance not found",),
+                         exc.args)
+
+    def test_is_ok_running(self):
+        conn = Mock()
+        conn.get_all_instances.return_value = [self.get_fake_reservation(
+            instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1",
+                        "state": "running", "state_code": 16}],
+        )]
+        instance = api_storage.Instance("secret", "secret.cloud.tsuru.io", "i-0800")
+        storage = Mock()
+        storage.retrieve.return_value = instance
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        ok, msg = manager.is_ok("secret")
+        self.assertTrue(ok)
+        self.assertEqual("", msg)
+        storage.retrieve.assert_called_with("secret")
+        conn.get_all_instances.assert_called_with(instance_ids=["i-0800"])
+
+    def test_is_ok_not_running(self):
+        conn = Mock()
+        conn.get_all_instances.return_value = [self.get_fake_reservation(
+            instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1",
+                        "state": "pending", "state_code": 0}],
+        )]
+        instance = api_storage.Instance("secret", "secret.cloud.tsuru.io", "i-0800")
+        storage = Mock()
+        storage.retrieve.return_value = instance
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        ok, msg = manager.is_ok("secret")
+        self.assertFalse(ok)
+        self.assertEqual("Instance is pending", msg)
+
+    def test_is_ok_instance_not_found_in_storage(self):
+        storage = Mock()
+        storage.retrieve.side_effect = ValueError("Instance not found")
+        manager = ec2.EC2Manager(storage)
+        with self.assertRaises(ValueError) as cm:
+            manager.is_ok("secret")
+        exc = cm.exception
+        self.assertEqual(("Instance not found",),
+                         exc.args)
+
+    def test_is_ok_instance_not_found_in_ec2_reservation(self):
+        conn = Mock()
+        conn.get_all_instances.return_value = []
+        instance = api_storage.Instance("secret", "secret.cloud.tsuru.io", "i-0800")
+        storage = Mock()
+        storage.retrieve.return_value = instance
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        with self.assertRaises(ValueError) as cm:
+            manager.is_ok("secret")
+        exc = cm.exception
+        self.assertEqual(("Instance not found",),
+                         exc.args)
+
+    def test_is_ok_instance_not_found_in_ec2_instances(self):
+        conn = Mock()
+        conn.get_all_instances.return_value = [self.get_fake_reservation(
+            instances=[],
+        )]
+        instance = api_storage.Instance("secret", "secret.cloud.tsuru.io", "i-0800")
+        storage = Mock()
+        storage.retrieve.return_value = instance
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        with self.assertRaises(ValueError) as cm:
+            manager.is_ok("secret")
         exc = cm.exception
         self.assertEqual(("Instance not found",),
                          exc.args)
