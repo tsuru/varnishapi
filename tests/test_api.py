@@ -3,9 +3,11 @@
 # license that can be found in the LICENSE file.
 
 import json
+import os
 import unittest
 
-from varnishapi import api
+from varnishapi import api, storage
+from varnishapi.managers import ec2
 from . import managers
 
 
@@ -14,13 +16,8 @@ class APITestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.manager = managers.FakeManager()
-        cls.old_get_manager = api.get_manager
         api.get_manager = lambda: cls.manager
         cls.api = api.api.test_client()
-
-    @classmethod
-    def tearDownClass(cls):
-        api.get_manager = cls.old_get_manager
 
     def setUp(self):
         self.manager.reset()
@@ -114,3 +111,35 @@ class APITestCase(unittest.TestCase):
         resp = self.api.get("/resources/someapp/status")
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
+
+
+class ManagerTestCase(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        reload(api)
+
+    def tearDown(self):
+        if "API_MANAGER" in os.environ:
+            del os.environ["API_MANAGER"]
+
+    def test_get_manager(self):
+        os.environ["API_MANAGER"] = "ec2"
+        os.environ["API_MONGODB_URI"] = "mongodb://localhost:27017"
+        manager = api.get_manager()
+        self.assertIsInstance(manager, ec2.EC2Manager)
+        self.assertIsInstance(manager.storage, storage.MongoDBStorage)
+
+    def test_get_manager_unknown(self):
+        os.environ["API_MANAGER"] = "ec3"
+        with self.assertRaises(ValueError) as cm:
+            api.get_manager()
+        exc = cm.exception
+        self.assertEqual(("ec3 is not a valid manager",),
+                         exc.args)
+
+    def test_get_manager_default(self):
+        os.environ["API_MONGODB_URI"] = "mongodb://localhost:27017"
+        manager = api.get_manager()
+        self.assertIsInstance(manager, ec2.EC2Manager)
+        self.assertIsInstance(manager.storage, storage.MongoDBStorage)

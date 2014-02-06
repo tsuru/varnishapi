@@ -8,8 +8,13 @@ import os
 from flask import Flask, request
 
 from . import storage
+from .managers import ec2
 
 api = Flask(__name__)
+
+managers = {
+    "ec2": ec2.EC2Manager,
+}
 
 
 @api.route("/resources", methods=["POST"])
@@ -76,7 +81,14 @@ def status(name):
 
 
 def get_manager():
-    pass
+    manager = os.environ.get("API_MANAGER", "ec2")
+    manager_class = managers.get(manager)
+    if not manager_class:
+        raise ValueError("{0} is not a valid manager".format(manager))
+    mongodb_uri = os.environ.get("API_MONGODB_URI")
+    mongodb_database = os.environ.get("API_MONGODB_DATABASE_NAME")
+    return manager_class(storage.MongoDBStorage(mongo_uri=mongodb_uri,
+                                                dbname=mongodb_database))
 
 if __name__ == "__main__":
     api.run()
