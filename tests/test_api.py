@@ -90,3 +90,23 @@ class APITestCase(unittest.TestCase):
         resp = self.api.get("/resources/someapp")
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
+
+    def test_status_running(self):
+        self.manager.add_instance("someapp", state="running")
+        resp = self.api.get("/resources/someapp/status")
+        self.assertEqual(204, resp.status_code)
+
+    def test_status_pending(self):
+        self.manager.add_instance("someapp", state="pending")
+        resp = self.api.get("/resources/someapp/status")
+        self.assertEqual(202, resp.status_code)
+
+    def test_status_error(self):
+        self.manager.add_instance("someapp", state="error")
+        resp = self.api.get("/resources/someapp/status")
+        self.assertEqual(500, resp.status_code)
+
+    def test_status_not_found(self):
+        resp = self.api.get("/resources/someapp/status")
+        self.assertEqual(404, resp.status_code)
+        self.assertEqual("Instance not found", resp.data)

@@ -81,6 +81,16 @@ def info(name):
         return "Instance not found", 404
 
 
+@api.route("/resources/<name>/status", methods=["GET"])
+def status(name):
+    states = {"running": 204, "pending": 202}
+    manager = get_manager()
+    try:
+        status = manager.status(name)
+    except storage.InstanceNotFoundError:
+        return "Instance not found", 404
+    return "", states.get(status, 500)
+
 def _get_instance_dns(name):
     c = conn.cursor()
     c.execute("select dns_name from instance_app where app_name=?", [name])
