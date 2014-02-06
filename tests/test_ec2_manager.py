@@ -7,6 +7,7 @@ import unittest
 
 from mock import Mock, patch
 
+from varnishapi import storage as api_storage
 from varnishapi.managers import ec2
 
 
@@ -283,6 +284,25 @@ ssh_authorized_keys: ['{0}']
         msg = "Failed to write VCL file in the instance {0}: something went wrong"
         syslog_mock.assert_called_with(original_syslog.LOG_ERR,
                                        msg.format(instance_ip))
+
+    def test_info(self):
+        instance = api_storage.Instance("secret", "secret.cloud.tsuru.io", "i-0800")
+        storage = Mock()
+        storage.retrieve.return_value = instance
+        manager = ec2.EC2Manager(storage)
+        info = manager.info("secret")
+        self.assertEqual(instance, info)
+        storage.retrieve.assert_called_with("secret")
+
+    def test_info_instance_not_found(self):
+        storage = Mock()
+        storage.retrieve.return_value = None
+        manager = ec2.EC2Manager(storage)
+        with self.assertRaises(ValueError) as cm:
+            manager.info("secret")
+        exc = cm.exception
+        self.assertEqual(("Instance not found",),
+                         exc.args)
 
     def get_fake_reservation(self, instances):
         reservation = Mock(instances=[])

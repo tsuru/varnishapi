@@ -109,5 +109,11 @@ ssh_authorized_keys: ['{0}']
             syslog.syslog(syslog.LOG_ERR, "Failed to terminate EC2 instance: %s" %
                           e.message)
 
+    def info(self, name):
+        instance = self.storage.retrieve(name)
+        if not instance:
+            raise ValueError("Instance not found")
+        return instance
+
     def is_ok(self):
         return True, ""
