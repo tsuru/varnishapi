@@ -85,6 +85,7 @@ class APITestCase(unittest.TestCase):
         self.manager.add_instance("someapp")
         resp = self.api.get("/resources/someapp")
         self.assertEqual(200, resp.status_code)
+        self.assertEqual("application/json", resp.mimetype)
         data = json.loads(resp.data)
         self.assertEqual({"name": "someapp"}, data)
 

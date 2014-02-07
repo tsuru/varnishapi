@@ -65,7 +65,8 @@ def unbind(name, host):
 def info(name):
     manager = get_manager()
     try:
-        return json.dumps(manager.info(name)), 200
+        return Response(response=json.dumps(manager.info(name)),
+                        status=200, mimetype="application/json")
     except storage.InstanceNotFoundError:
         return "Instance not found", 404
 
