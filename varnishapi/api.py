@@ -5,7 +5,7 @@
 import json
 import os
 
-from flask import Flask, request
+from flask import Flask, Response, request
 
 from . import storage
 from .managers import ec2
@@ -47,7 +47,8 @@ def bind(name):
         manager.bind(name, app_host)
     except storage.InstanceNotFoundError:
         return "Instance not found", 404
-    return "null", 201
+    return Response(response="null", status=201,
+                    mimetype="application/json")
 
 
 @api.route("/resources/<name>/hostname/<host>", methods=["DELETE"])

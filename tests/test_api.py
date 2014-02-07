@@ -52,6 +52,7 @@ class APITestCase(unittest.TestCase):
                              data={"app-host": "someapp.cloud.tsuru.io"})
         self.assertEqual(201, resp.status_code)
         self.assertEqual("null", resp.data)
+        self.assertEqual("application/json", resp.mimetype)
         bind = self.manager.instances[0].bound[0]
         self.assertEqual("someapp.cloud.tsuru.io", bind)
 
