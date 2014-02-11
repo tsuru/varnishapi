@@ -6,7 +6,7 @@ import cStringIO as StringIO
 import os
 import urlparse
 import subprocess
-import syslog
+import sys
 
 from varnishapi import storage
 
@@ -62,8 +62,8 @@ class EC2Manager(object):
                                                     dns_name=instance.dns_name,
                                                     name=name))
         except Exception as e:
-            syslog.syslog(syslog.LOG_ERR, "Failed to create EC2 instance: %s" %
-                          e.message)
+            sys.stderr.write("[ERROR] Failed to create EC2 instance: %s" %
+                             e.message)
         return reservation
 
     def _user_data(self):
@@ -109,9 +109,8 @@ class EC2Manager(object):
         out.seek(0)
         out = out.read()
         if exit_status != 0:
-            msg = "Failed to write VCL file in the instance {0}: {1}"
-            msg = msg.format(instance_addr, out)
-            syslog.syslog(syslog.LOG_ERR, msg)
+            msg = "[ERROR] Failed to write VCL file in the instance {0}: {1}"
+            sys.stderr.write(msg.format(instance_addr, out))
             raise Exception("Could not connect to the service instance")
 
     def remove_instance(self, name):
@@ -120,8 +119,8 @@ class EC2Manager(object):
             self.connection.terminate_instances(instance_ids=[instance.id])
             self.storage.remove(name=name)
         except Exception as e:
-            syslog.syslog(syslog.LOG_ERR, "Failed to terminate EC2 instance: %s" %
-                          e.message)
+            sys.stderr.write("[ERROR] Failed to terminate EC2 instance: %s" %
+                             e.message)
 
     def info(self, name):
         return self.storage.retrieve(name).to_dict()

@@ -112,16 +112,15 @@ ssh_authorized_keys: ['{0}']
                                                    user_data=user_data)
         storage.store.assert_called_once()
 
-    @patch("syslog.syslog")
-    def test_add_instance_ec2_failure(self, syslog_mock):
-        import syslog as original_syslog
+    @patch("sys.stderr")
+    def test_add_instance_ec2_failure(self, stderr_mock):
         conn = Mock()
         conn.run_instances.side_effect = ValueError("Something went wrong")
         manager = ec2.EC2Manager(None)
         manager._connection = conn
         manager.add_instance("someapp")
-        msg = "Failed to create EC2 instance: Something went wrong"
-        syslog_mock.assert_called_with(original_syslog.LOG_ERR, msg)
+        msg = "[ERROR] Failed to create EC2 instance: Something went wrong"
+        stderr_mock.write.assert_called_with(msg)
 
     def test_add_instance_no_key_path(self):
         del os.environ["KEY_PATH"]
@@ -201,16 +200,15 @@ packages: ['varnish', 'vim-nox']
         storage.retrieve.assert_called_with(name="someapp")
         storage.remove.assert_called_with(name="someapp")
 
-    @patch("syslog.syslog")
-    def test_remove_instance_ec2_failure(self, syslog_mock):
-        import syslog as original_syslog
+    @patch("sys.stderr")
+    def test_remove_instance_ec2_failure(self, stderr_mock):
         conn = Mock()
         conn.terminate_instances.side_effect = ValueError("Something went wrong")
         manager = ec2.EC2Manager(Mock())
         manager._connection = conn
         manager.remove_instance("someapp")
-        msg = "Failed to terminate EC2 instance: Something went wrong"
-        syslog_mock.assert_called_with(original_syslog.LOG_ERR, msg)
+        msg = "[ERROR] Failed to terminate EC2 instance: Something went wrong"
+        stderr_mock.write.assert_called_with(msg)
 
     def test_bind_instance(self):
         conn = Mock()
@@ -302,8 +300,8 @@ packages: ['varnish', 'vim-nox']
         self.assertEqual(expected, cmd_arg)
 
     @patch("subprocess.call")
-    @patch("syslog.syslog")
-    def test_write_vcl_failure_stdout(self, syslog_mock, sp_mock):
+    @patch("sys.stderr")
+    def test_write_vcl_failure_stdout(self, stderr_mock, sp_mock):
         def side_effect(*args, **kwargs):
             kwargs["stdout"].write("something went wrong")
         sp_mock.side_effect = side_effect
@@ -316,14 +314,12 @@ packages: ['varnish', 'vim-nox']
         exc = cm.exception
         self.assertEqual(("Could not connect to the service instance",),
                          exc.args)
-        import syslog as original_syslog
-        msg = "Failed to write VCL file in the instance {0}: something went wrong"
-        syslog_mock.assert_called_with(original_syslog.LOG_ERR,
-                                       msg.format(instance_ip))
+        msg = "[ERROR] Failed to write VCL file in the instance {0}: something went wrong"
+        stderr_mock.write.assert_called_with(msg.format(instance_ip))
 
     @patch("subprocess.call")
-    @patch("syslog.syslog")
-    def test_write_vcl_failure_stderr(self, syslog_mock, sp_mock):
+    @patch("sys.stderr")
+    def test_write_vcl_failure_stderr(self, stderr_mock, sp_mock):
         def side_effect(*args, **kwargs):
             kwargs["stderr"].write("something went wrong")
         sp_mock.side_effect = side_effect
@@ -333,10 +329,8 @@ packages: ['varnish', 'vim-nox']
         manager = ec2.EC2Manager(None)
         with self.assertRaises(Exception):
             manager.write_vcl(instance_ip, app_host)
-        import syslog as original_syslog
-        msg = "Failed to write VCL file in the instance {0}: something went wrong"
-        syslog_mock.assert_called_with(original_syslog.LOG_ERR,
-                                       msg.format(instance_ip))
+        msg = "[ERROR] Failed to write VCL file in the instance {0}: something went wrong"
+        stderr_mock.write.assert_called_with(msg.format(instance_ip))
 
     def test_info(self):
         instance = api_storage.Instance("secret", "secret.cloud.tsuru.io", "i-0800")
