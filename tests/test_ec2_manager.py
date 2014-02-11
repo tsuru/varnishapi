@@ -28,69 +28,84 @@ class EC2ManagerTestCase(unittest.TestCase):
         os.environ["EC2_ENDPOINT"] = "http://amazonaws.com"
 
     @patch("boto.ec2.EC2Connection")
-    def test_connection_http(self, ec2_mock):
+    @patch("boto.ec2.RegionInfo")
+    def test_connection_http(self, region_mock, ec2_mock):
+        m = Mock()
+        region_mock.return_value = m
         os.environ["EC2_ENDPOINT"] = "http://amazonaws.com"
         ec2_mock.return_value = "connection to ec2"
         conn = ec2.EC2Manager(None).connection
         self.assertEqual("connection to ec2", conn)
         ec2_mock.assert_called_with(aws_access_key_id=self.access_key,
                                     aws_secret_access_key=self.secret_key,
-                                    host="amazonaws.com",
-                                    port=80,
-                                    path="/",
-                                    is_secure=False)
+                                    host="amazonaws.com", port=80,
+                                    path="/", is_secure=False,
+                                    region=m)
+        region_mock.assert_called_with(name="custom", endpoint="amazonaws.com")
 
     @patch("boto.ec2.EC2Connection")
-    def test_connection_https(self, ec2_mock):
+    @patch("boto.ec2.RegionInfo")
+    def test_connection_https(self, region_mock, ec2_mock):
+        m = Mock()
+        region_mock.return_value = m
         os.environ["EC2_ENDPOINT"] = "https://amazonaws.com"
         ec2_mock.return_value = "connection to ec2"
         conn = ec2.EC2Manager(None).connection
         self.assertEqual("connection to ec2", conn)
         ec2_mock.assert_called_with(aws_access_key_id=self.access_key,
                                     aws_secret_access_key=self.secret_key,
-                                    host="amazonaws.com",
-                                    port=443,
-                                    path="/",
-                                    is_secure=True)
+                                    host="amazonaws.com", port=443,
+                                    path="/", is_secure=True,
+                                    region=m)
+        region_mock.assert_called_with(name="custom", endpoint="amazonaws.com")
 
     @patch("boto.ec2.EC2Connection")
-    def test_ec2_connection_http_custom_port(self, ec2_mock):
+    @patch("boto.ec2.RegionInfo")
+    def test_ec2_connection_http_custom_port(self, region_mock, ec2_mock):
+        m = Mock()
+        region_mock.return_value = m
         os.environ["EC2_ENDPOINT"] = "http://amazonaws.com:8080"
         ec2_mock.return_value = "connection to ec2"
         conn = ec2.EC2Manager(None).connection
         self.assertEqual("connection to ec2", conn)
         ec2_mock.assert_called_with(aws_access_key_id=self.access_key,
                                     aws_secret_access_key=self.secret_key,
-                                    host="amazonaws.com",
-                                    port=8080,
-                                    path="/",
-                                    is_secure=False)
+                                    host="amazonaws.com", port=8080,
+                                    path="/", is_secure=False,
+                                    region=m)
+        region_mock.assert_called_with(name="custom", endpoint="amazonaws.com")
 
     @patch("boto.ec2.EC2Connection")
-    def test_ec2_connection_https_custom_port(self, ec2_mock):
+    @patch("boto.ec2.RegionInfo")
+    def test_ec2_connection_https_custom_port(self, region_mock, ec2_mock):
+        m = Mock()
+        region_mock.return_value = m
         os.environ["EC2_ENDPOINT"] = "https://amazonaws.com:8080"
         ec2_mock.return_value = "connection to ec2"
         conn = ec2.EC2Manager(None).connection
         self.assertEqual("connection to ec2", conn)
         ec2_mock.assert_called_with(aws_access_key_id=self.access_key,
                                     aws_secret_access_key=self.secret_key,
-                                    host="amazonaws.com",
-                                    port=8080,
-                                    path="/",
-                                    is_secure=True)
+                                    host="amazonaws.com", port=8080,
+                                    path="/", is_secure=True,
+                                    region=m)
+        region_mock.assert_called_with(name="custom", endpoint="amazonaws.com")
 
     @patch("boto.ec2.EC2Connection")
-    def test_ec2_connection_custom_path(self, ec2_mock):
+    @patch("boto.ec2.RegionInfo")
+    def test_ec2_connection_custom_path(self, region_mock, ec2_mock):
+        m = Mock()
+        region_mock.return_value = m
         os.environ["EC2_ENDPOINT"] = "https://amazonaws.com:8080/something"
         ec2_mock.return_value = "connection to ec2"
         result = ec2.EC2Manager(None).connection
         self.assertEqual("connection to ec2", result)
         ec2_mock.assert_called_with(aws_access_key_id=self.access_key,
                                     aws_secret_access_key=self.secret_key,
-                                    host="amazonaws.com",
-                                    port=8080,
-                                    path="/something",
-                                    is_secure=True)
+                                    host="amazonaws.com", port=8080,
+                                    path="/something", is_secure=True,
+                                    region=m)
+        region_mock.assert_called_with(name="custom", endpoint="amazonaws.com")
 
     def test_add_instance(self):
         conn = Mock()

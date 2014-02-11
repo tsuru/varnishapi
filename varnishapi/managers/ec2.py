@@ -43,11 +43,12 @@ class EC2Manager(object):
         else:
             port = 80 if scheme == "http" else 443
         path = url.path or "/"
+        region = ec2.RegionInfo(name="custom", endpoint=host)
         return ec2.EC2Connection(aws_access_key_id=access_key,
                                  aws_secret_access_key=secret_key,
                                  host=host, port=port,
                                  is_secure=scheme == "https",
-                                 path=path)
+                                 path=path, region=region)
 
     def add_instance(self, name):
         ami_id = os.environ.get("AMI_ID")
@@ -63,7 +64,7 @@ class EC2Manager(object):
                                                     name=name))
         except Exception as e:
             sys.stderr.write("[ERROR] Failed to create EC2 instance: %s" %
-                             e.message)
+                             e.args[0])
         return reservation
 
     def _user_data(self):
