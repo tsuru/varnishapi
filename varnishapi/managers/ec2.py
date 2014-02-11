@@ -50,20 +50,13 @@ class EC2Manager(object):
                                  path=path)
 
     def add_instance(self, name):
-        key_path = os.environ.get("KEY_PATH", os.path.expanduser("~/.ssh/id_rsa.pub"))
         ami_id = os.environ.get("AMI_ID")
         subnet_id = os.environ.get("SUBNET_ID")
-        key = ""
-        with open(key_path) as key_file:
-            key = key_file.read()
-        user_data = """#cloud-config
-ssh_authorized_keys: ['{0}']
-""".format(key)
         reservation = None
         try:
             reservation = self.connection.run_instances(image_id=ami_id,
                                                         subnet_id=subnet_id,
-                                                        user_data=user_data)
+                                                        user_data=self._user_data())
             for instance in reservation.instances:
                 self.storage.store(storage.Instance(id=instance.id,
                                                     dns_name=instance.dns_name,
@@ -72,6 +65,18 @@ ssh_authorized_keys: ['{0}']
             syslog.syslog(syslog.LOG_ERR, "Failed to create EC2 instance: %s" %
                           e.message)
         return reservation
+
+    def _user_data(self):
+        key_path = os.environ.get("KEY_PATH")
+        user_data = None
+        if key_path:
+            key = ""
+            with open(key_path) as key_file:
+                key = key_file.read()
+            user_data = """#cloud-config
+ssh_authorized_keys: ['{0}']
+""".format(key)
+        return user_data
 
     def bind(self, name, app_host):
         self._set_backend(name, app_host)

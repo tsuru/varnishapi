@@ -123,6 +123,24 @@ ssh_authorized_keys: ['{0}']
         msg = "Failed to create EC2 instance: Something went wrong"
         syslog_mock.assert_called_with(original_syslog.LOG_ERR, msg)
 
+    def test_add_instance_no_key_path(self):
+        del os.environ["KEY_PATH"]
+        def recover():
+            os.environ["KEY_PATH"] = self.key_path
+        self.addCleanup(recover)
+        conn = Mock()
+        conn.run_instances.return_value = self.get_fake_reservation(
+            instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
+        )
+        storage = Mock()
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        manager.add_instance("someapp")
+        conn.run_instances.assert_called_once_with(image_id=self.ami_id,
+                                                   subnet_id=self.subnet_id,
+                                                   user_data=None)
+        storage.store.assert_called_once()
+
     def test_remove_instance(self):
         conn = Mock()
         storage = Mock()
