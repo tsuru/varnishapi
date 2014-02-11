@@ -64,7 +64,7 @@ class EC2Manager(object):
                                                     name=name))
         except Exception as e:
             sys.stderr.write("[ERROR] Failed to create EC2 instance: %s" %
-                             e.args[0])
+                             " ".join(e.args))
         return reservation
 
     def _user_data(self):
@@ -121,7 +121,7 @@ class EC2Manager(object):
             self.storage.remove(name=name)
         except Exception as e:
             sys.stderr.write("[ERROR] Failed to terminate EC2 instance: %s" %
-                             e.message)
+                             " ".join(e.args))
 
     def info(self, name):
         return self.storage.retrieve(name).to_dict()
