@@ -67,16 +67,23 @@ class EC2Manager(object):
         return reservation
 
     def _user_data(self):
+        user_data_lines = []
         key_path = os.environ.get("KEY_PATH")
-        user_data = None
         if key_path:
             key = ""
             with open(key_path) as key_file:
                 key = key_file.read()
-            user_data = """#cloud-config
-ssh_authorized_keys: ['{0}']
-""".format(key)
-        return user_data
+            user_data_lines.append("ssh_authorized_keys: ['{0}']".format(key))
+        packages = os.environ.get("API_PACKAGES")
+        if packages:
+            packages = packages.split(" ")
+            formatted = []
+            for package in packages:
+                formatted.append("'{0}'".format(package))
+            user_data_lines.append("packages: [{0}]".format(", ".join(formatted)))
+        if user_data_lines:
+            user_data_lines.insert(0, "#cloud-config")
+            return "\n".join(user_data_lines) + "\n"
 
     def bind(self, name, app_host):
         self._set_backend(name, app_host)

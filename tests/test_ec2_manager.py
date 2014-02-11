@@ -125,6 +125,7 @@ ssh_authorized_keys: ['{0}']
 
     def test_add_instance_no_key_path(self):
         del os.environ["KEY_PATH"]
+
         def recover():
             os.environ["KEY_PATH"] = self.key_path
         self.addCleanup(recover)
@@ -139,6 +140,54 @@ ssh_authorized_keys: ['{0}']
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
                                                    user_data=None)
+        storage.store.assert_called_once()
+
+    def test_add_instance_packages(self):
+        os.environ["API_PACKAGES"] = "varnish vim-nox"
+        del os.environ["KEY_PATH"]
+
+        def recover():
+            os.environ["KEY_PATH"] = self.key_path
+            del os.environ["API_PACKAGES"]
+        self.addCleanup(recover)
+        conn = Mock()
+        conn.run_instances.return_value = self.get_fake_reservation(
+            instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
+        )
+        storage = Mock()
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        manager.add_instance("someapp")
+        user_data = "#cloud-config\npackages: ['varnish', 'vim-nox']\n"
+        conn.run_instances.assert_called_once_with(image_id=self.ami_id,
+                                                   subnet_id=self.subnet_id,
+                                                   user_data=user_data)
+        storage.store.assert_called_once()
+
+    def test_add_instance_packages_and_key_path(self):
+        os.environ["API_PACKAGES"] = "varnish vim-nox"
+
+        def recover():
+            del os.environ["API_PACKAGES"]
+        self.addCleanup(recover)
+        conn = Mock()
+        conn.run_instances.return_value = self.get_fake_reservation(
+            instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
+        )
+        storage = Mock()
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        manager.add_instance("someapp")
+        f = open(self.key_path)
+        key = f.read()
+        f.close()
+        user_data = """#cloud-config
+ssh_authorized_keys: ['{0}']
+packages: ['varnish', 'vim-nox']
+""".format(key)
+        conn.run_instances.assert_called_once_with(image_id=self.ami_id,
+                                                   subnet_id=self.subnet_id,
+                                                   user_data=user_data)
         storage.store.assert_called_once()
 
     def test_remove_instance(self):
