@@ -11,6 +11,7 @@ from . import storage
 from .managers import ec2
 
 api = Flask(__name__)
+api.debug = os.environ.get("API_DEBUG", "0") in ("True", "true", "1")
 
 managers = {
     "ec2": ec2.EC2Manager,
