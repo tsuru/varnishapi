@@ -8,6 +8,9 @@ test_deps:
 test: test_deps
 	python -m unittest discover
 
+run:
+	python run.py
+
 coverage: test_deps
 	coverage run --source=. -m unittest discover
 	coverage report -m --omit=test\*

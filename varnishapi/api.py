@@ -92,6 +92,3 @@ def get_manager():
     mongodb_database = os.environ.get("API_MONGODB_DATABASE_NAME")
     return manager_class(storage.MongoDBStorage(mongo_uri=mongodb_uri,
                                                 dbname=mongodb_database))
-
-if __name__ == "__main__":
-    api.run()
