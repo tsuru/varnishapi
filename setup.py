@@ -11,7 +11,7 @@ README = codecs.open('README.rst', encoding='utf-8').read()
 
 setup(
     name="tsuru-feaas",
-    version="0.1.0",
+    version="0.1.1",
     description="Frontend as-a-service API for Tsuru PaaS",
     long_description=README,
     author="CobraTeam",
