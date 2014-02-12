@@ -7,7 +7,7 @@ import codecs
 
 from setuptools import setup, find_packages
 
-README = codecs.open('README.md', encoding='utf-8').read()
+README = codecs.open('README.rst', encoding='utf-8').read()
 
 setup(
     name="tsuru-feaas",
