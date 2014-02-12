@@ -13,7 +13,7 @@ run:
 
 coverage: test_deps
 	coverage run --source=. -m unittest discover
-	coverage report -m --omit=test\*
+	coverage report -m --omit=test\*,setup\*,run\*
 	rm .coverage
 
 flake8:
