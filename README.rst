@@ -32,49 +32,58 @@ When you get an output like this you can proceed to push.
 
 ::
 
-    +------------------+-------------------------+--------------------------------------+
-    | Application      | Units State Summary     | Address                              |
-    +------------------+-------------------------+--------------------------------------+
-    | your-app         | 1 of 1 units in-service | your-app.sa-east-1.elb.amazonaws.com |
-    +------------------+-------------------------+--------------------------------------+
+    +-------------+-------------------------+--------------------------------------+
+    | Application | Units State Summary     | Address                              |
+    +-------------+-------------------------+--------------------------------------+
+    | your-app    | 1 of 1 units in-service | your-app.sa-east-1.elb.amazonaws.com |
+    +-------------+-------------------------+--------------------------------------+
 
 Now if you access our app endpoint at "/" (you can check with `tsuru app-info`
-cmd) you should get a 404, which is right, since our api does not respond
+cmd) you should get a 404, which is right, since the API does not respond
 through this url.
 
-Alright, let's configure our application, it'll need to talk with EC2 api, and
+Alright, let's configure the application, it'll need to talk with EC2 API, and
 it does so by using environment variables. Here's what you need:
 
+.. highlight: bash
+
+::
+
+    % tsuru env-set EC2_ENDPOINT=https://ec2.amazonaws.com EC2_ACCESS_KEY=your-access-key EC2_SECRET_KEY=your-secret-key
+
+In order to get Varnish running, you can provide an AMI or a list of packages
+to install via user data. The AMI is specified via the ``AMI_ID`` environment
+variable, while the packages are specified by the ``API_PACKAGES`` environment
+variable. Users may specify both variables.
 
 .. highlight: bash
 
 ::
 
-    % tsuru env-set EC2_ACCESS_KEY=your-access-key EC2_SECRET_KEY=your-secret-key
+    % tsuru env-set AMI_ID=your-ami-id API_PACKAGES=varnish vim-nox
 
-We'll need to pass the ami we just generated to run when a user requests a
-service creation, let's set what ami we're gonna use:
+Users may also specify a subnet for running with VPC. You can specify the
+subnet ID via the ``SUBNET_ID`` environment variable.
 
 .. highlight: bash
 
 ::
-
-    % tsuru env-set AMI_ID=your-ami-id
-
-If you are running this on a VPC, you'll also need to tell the api in which
-subnet it will spawn the service's vms for the applications:
 
     % tsuru env-set SUBNET_ID=your-subnet-id
 
-Every service instance has an elastic load balancing in front of it, which by
-default, is configured to `internet-facing`, which means you can access it
-publicly, if you don't want this behavior, set the `ELB_SCHEME` environment
-variable to `internal`.
+The API also needs a SSH key in order to comunicate with the service instances'
+VMs. You will need to store the key in the application machine and export the
+environment variable ``KEY_PATH``:
 
-The api also needs a ssh key in order to comunicate with the service instances'
-vms, let's generate it:
+.. highlight: bash
 
-    % tsuru run 'ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa'
+::
+
+    % tsuru env-set KEY_PATH=/home/ubuntu/.ssh/id_rsa.pub
+
+One more thing: this API will use MongoDB to store information about instances,
+the MongoDB endpoint and the database name is also controlled via environment
+variables:
 
 We're done with our API! Let's create the service in Tsuru.
 
