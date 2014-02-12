@@ -1,3 +1,2 @@
 include *.md
 prune tests
-prune setup
