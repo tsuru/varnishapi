@@ -8,7 +8,7 @@ import urlparse
 import subprocess
 import sys
 
-from varnishapi import storage
+from feaas import storage
 
 VCL_TEMPLATE = """backend default {{
     .host = \\"{0}\\";

@@ -7,7 +7,7 @@ import codecs
 
 from setuptools import setup, find_packages
 
-from varnishapi import __version__
+from feaas import __version__
 
 README = codecs.open('README.rst', encoding='utf-8').read()
 

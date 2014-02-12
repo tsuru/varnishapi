@@ -7,8 +7,8 @@ import unittest
 
 from mock import Mock, patch
 
-from varnishapi import storage as api_storage
-from varnishapi.managers import ec2
+from feaas import storage as api_storage
+from feaas.managers import ec2
 
 
 class EC2ManagerTestCase(unittest.TestCase):

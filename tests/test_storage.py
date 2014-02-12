@@ -7,7 +7,7 @@ import unittest
 
 import pymongo
 
-from varnishapi import storage
+from feaas import storage
 
 
 class InstanceTestCase(unittest.TestCase):

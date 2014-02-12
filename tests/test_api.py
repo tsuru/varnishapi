@@ -6,8 +6,8 @@ import json
 import os
 import unittest
 
-from varnishapi import api, storage
-from varnishapi.managers import ec2
+from feaas import api, storage
+from feaas.managers import ec2
 from . import managers
 
 
