@@ -7,11 +7,13 @@ import codecs
 
 from setuptools import setup, find_packages
 
+from varnishapi import __version__
+
 README = codecs.open('README.rst', encoding='utf-8').read()
 
 setup(
     name="tsuru-feaas",
-    version="0.1.1",
+    version=__version__,
     description="Frontend as-a-service API for Tsuru PaaS",
     long_description=README,
     author="CobraTeam",
