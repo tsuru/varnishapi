@@ -1,1 +1,1 @@
-web: gunicorn varnishapi.api:api -b 0.0.0.0:8888
+web: gunicorn feaas.api:api -b 0.0.0.0:8888
