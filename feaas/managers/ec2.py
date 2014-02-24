@@ -70,12 +70,13 @@ class EC2Manager(object):
     def _user_data(self):
         user_data_lines = []
         key_path = os.environ.get("KEY_PATH")
+        ssh_path = os.environ.get("SSH_PATH", "/home/ubuntu/.ssh")
         if key_path:
             key = ""
             with open(key_path) as key_file:
                 key = key_file.read()
-            user_data_lines.extend(["mkdir -p /home/ubuntu/.ssh",
-                                    "cat >> /home/ubuntu/.ssh/authorized_keys <<END",
+            user_data_lines.extend(["mkdir -p {0}".format(ssh_path),
+                                    "cat >> {0}/authorized_keys <<END".format(ssh_path),
                                     key, "END"])
         user_data_lines.extend(self._packages())
         if user_data_lines:
