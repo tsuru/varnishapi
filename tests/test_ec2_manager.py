@@ -119,8 +119,10 @@ class EC2ManagerTestCase(unittest.TestCase):
         f = open(self.key_path)
         key = f.read()
         f.close()
-        user_data = """#cloud-config
-ssh_authorized_keys: ['{0}']
+        user_data = """mkdir -p /home/ubuntu/.ssh
+cat >> /home/ubuntu/.ssh/authorized_keys <<END
+{0}
+END
 """.format(key)
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
@@ -172,7 +174,9 @@ ssh_authorized_keys: ['{0}']
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         manager.add_instance("someapp")
-        user_data = "#cloud-config\npackages: ['varnish', 'vim-nox']\n"
+        user_data = """apt-get update
+apt-get install -y varnish vim-nox
+"""
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
                                                    user_data=user_data)
@@ -195,9 +199,12 @@ ssh_authorized_keys: ['{0}']
         f = open(self.key_path)
         key = f.read()
         f.close()
-        user_data = """#cloud-config
-ssh_authorized_keys: ['{0}']
-packages: ['varnish', 'vim-nox']
+        user_data = """mkdir -p /home/ubuntu/.ssh
+cat >> /home/ubuntu/.ssh/authorized_keys <<END
+{0}
+END
+apt-get update
+apt-get install -y varnish vim-nox
 """.format(key)
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,

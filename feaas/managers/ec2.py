@@ -74,17 +74,19 @@ class EC2Manager(object):
             key = ""
             with open(key_path) as key_file:
                 key = key_file.read()
-            user_data_lines.append("ssh_authorized_keys: ['{0}']".format(key))
+            user_data_lines.extend(["mkdir -p /home/ubuntu/.ssh",
+                                    "cat >> /home/ubuntu/.ssh/authorized_keys <<END",
+                                    key, "END"])
+        user_data_lines.extend(self._packages())
+        if user_data_lines:
+            return "\n".join(user_data_lines) + "\n"
+
+    def _packages(self):
         packages = os.environ.get("API_PACKAGES")
         if packages:
-            packages = packages.split(" ")
-            formatted = []
-            for package in packages:
-                formatted.append("'{0}'".format(package))
-            user_data_lines.append("packages: [{0}]".format(", ".join(formatted)))
-        if user_data_lines:
-            user_data_lines.insert(0, "#cloud-config")
-            return "\n".join(user_data_lines) + "\n"
+            return ["apt-get update",
+                    "apt-get install -y {0}".format(packages)]
+        return []
 
     def bind(self, name, app_host):
         self._set_backend(name, app_host)
