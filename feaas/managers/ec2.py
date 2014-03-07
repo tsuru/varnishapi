@@ -106,7 +106,7 @@ class EC2Manager(object):
     def write_vcl(self, instance_addr, app_addr):
         out = StringIO.StringIO()
         cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'
-        cmd = cmd.format(VCL_TEMPLATE.format(app_addr))
+        cmd = cmd.format(self.vcl_template().format(app_addr))
         exit_status = subprocess.call(["ssh", instance_addr, "-l", "ubuntu",
                                        "-o", "StrictHostKeyChecking no", cmd],
                                       stdout=out, stderr=out)
@@ -116,6 +116,9 @@ class EC2Manager(object):
             msg = "[ERROR] Failed to write VCL file in the instance {0}: {1}"
             sys.stderr.write(msg.format(instance_addr, out))
             raise Exception("Could not connect to the service instance")
+
+    def vcl_template(self):
+        return VCL_TEMPLATE
 
     def remove_instance(self, name):
         instance = self.storage.retrieve(name=name)
