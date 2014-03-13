@@ -29,10 +29,10 @@ class Instance(object):
 class MongoDBStorage(object):
 
     def __init__(self, mongo_uri=None, dbname=None):
-        mongo_uri = mongo_uri or "mongodb://localhost:27017/"
-        dbname = dbname or "feaas"
-        client = pymongo.MongoClient(mongo_uri)
-        self.db = client[dbname]
+        self.mongo_uri = mongo_uri or "mongodb://localhost:27017/"
+        self.dbname = dbname or "feaas"
+        client = pymongo.MongoClient(self.mongo_uri)
+        self.db = client[self.dbname]
         self.collection_name = "instances"
 
     def store(self, instance):
