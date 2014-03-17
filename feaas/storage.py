@@ -47,3 +47,13 @@ class MongoDBStorage(object):
 
     def remove(self, name):
         self.db[self.collection_name].remove({"name": name})
+
+    def retrieve_public_key(self):
+        return self.key["public_body"]
+
+    def retrieve_private_key(self):
+        return self.key["private_body"]
+
+    @property
+    def key(self):
+        return self.db.keys.find_one()
