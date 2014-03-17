@@ -158,6 +158,32 @@ END
                                                    user_data=None)
         storage.store.assert_called_once()
 
+    def test_add_instance_key_from_storage(self):
+        os.environ["LOAD_KEY_FROM_STORAGE"] = "1"
+
+        def recover():
+            del os.environ["LOAD_KEY_FROM_STORAGE"]
+        self.addCleanup(recover)
+        conn = Mock()
+        conn.run_instances.return_value = self.get_fake_reservation(
+            instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
+        )
+        storage = Mock()
+        storage.retrieve_public_key.return_value = "public_key"
+        manager = ec2.EC2Manager(storage)
+        manager._connection = conn
+        manager.add_instance("someapp")
+        user_data = """mkdir -p /home/ubuntu/.ssh
+cat >> /home/ubuntu/.ssh/authorized_keys <<END
+public_key
+END
+"""
+        conn.run_instances.assert_called_once_with(image_id=self.ami_id,
+                                                   subnet_id=self.subnet_id,
+                                                   user_data=user_data)
+        storage.store.assert_called_once()
+        storage.retrieve_public_key.assert_called_once()
+
     def test_add_instance_packages(self):
         os.environ["API_PACKAGES"] = "varnish vim-nox"
         del os.environ["KEY_PATH"]
