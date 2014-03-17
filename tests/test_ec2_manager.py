@@ -326,6 +326,25 @@ apt-get install -y varnish vim-nox
         self.assertEqual(expected, cmd_arg)
 
     @patch("subprocess.call")
+    def test_write_vcl_custom_user(self, sp_mock):
+        sp_mock.return_value = 0
+        os.environ["SSH_USER"] = "root"
+
+        def clean():
+            del os.environ["SSH_USER"]
+            reload(ec2)
+        reload(ec2)
+        app_host = "myapp.cloud.tsuru.io"
+        instance_ip = "10.2.2.1"
+        manager = ec2.EC2Manager(None)
+        manager.write_vcl(instance_ip, app_host)
+        cmd = "sudo bash -c \"echo '{0}' > /etc/varnish/default.vcl && service varnish reload\""
+        cmd = cmd.format(manager.vcl_template().format(app_host))
+        expected = ["ssh", instance_ip, "-l", "root", "-o", "StrictHostKeyChecking no", cmd]
+        cmd_arg = sp_mock.call_args_list[0][0][0]
+        self.assertEqual(expected, cmd_arg)
+
+    @patch("subprocess.call")
     @patch("sys.stderr")
     def test_write_vcl_failure_stdout(self, stderr_mock, sp_mock):
         def side_effect(*args, **kwargs):

@@ -107,7 +107,8 @@ class EC2Manager(object):
         out = StringIO.StringIO()
         cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'
         cmd = cmd.format(self.vcl_template().format(app_addr))
-        exit_status = subprocess.call(["ssh", instance_addr, "-l", "ubuntu",
+        user = os.environ.get("SSH_USER", "ubuntu")
+        exit_status = subprocess.call(["ssh", instance_addr, "-l", user,
                                        "-o", "StrictHostKeyChecking no", cmd],
                                       stdout=out, stderr=out)
         out.seek(0)
