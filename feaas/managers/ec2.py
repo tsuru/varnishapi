@@ -7,6 +7,7 @@ import os
 import urlparse
 import subprocess
 import sys
+import tempfile
 
 from feaas import storage
 
@@ -109,13 +110,18 @@ class EC2Manager(object):
         self.write_vcl(instance_ip, backend)
 
     def write_vcl(self, instance_addr, app_addr):
+        user = os.environ.get("SSH_USER", "ubuntu")
+        cmds = ["ssh", instance_addr, "-l", user]
+        if os.environ.get("LOAD_KEY_FROM_STORAGE"):
+            priv_key = self.storage.retrieve_private_key()
+            key_file = tempfile.NamedTemporaryFile(delete=True)
+            key_file.write(priv_key)
+            cmds.extend(["-i", key_file.name])
         out = StringIO.StringIO()
         cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'
         cmd = cmd.format(self.vcl_template().format(app_addr))
-        user = os.environ.get("SSH_USER", "ubuntu")
-        exit_status = subprocess.call(["ssh", instance_addr, "-l", user,
-                                       "-o", "StrictHostKeyChecking no", cmd],
-                                      stdout=out, stderr=out)
+        cmds.extend(["-o", "StrictHostKeyChecking no", cmd])
+        exit_status = subprocess.call(cmds, stdout=out, stderr=out)
         out.seek(0)
         out = out.read()
         if exit_status != 0:
