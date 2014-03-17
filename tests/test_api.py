@@ -121,9 +121,34 @@ class ManagerTestCase(unittest.TestCase):
     def setUpClass(cls):
         reload(api)
 
+    def setUp(self):
+        if "waaat" in api.managers:
+            del api.managers["waaat"]
+
     def tearDown(self):
         if "API_MANAGER" in os.environ:
             del os.environ["API_MANAGER"]
+
+    def test_register_manager(self):
+        manager = lambda x: x
+        api.register_manager("waaat", manager)
+        self.assertEqual(manager, api.managers["waaat"])
+
+    def test_register_manager_override(self):
+        first_manager = lambda x: x
+        second_manager = lambda x, y: x + y
+        api.register_manager("waaat", first_manager)
+        api.register_manager("waaat", second_manager, override=True)
+        self.assertEqual(second_manager, api.managers["waaat"])
+
+    def test_register_manager_without_override(self):
+        first_manager = lambda x: x
+        second_manager = lambda x, y: x + y
+        api.register_manager("waaat", first_manager)
+        with self.assertRaises(ValueError) as cm:
+            api.register_manager("waaat", second_manager, override=False)
+        exc = cm.exception
+        self.assertEqual(("Manager already registered",), exc.args)
 
     def test_get_manager(self):
         os.environ["API_MANAGER"] = "ec2"

@@ -83,6 +83,12 @@ def status(name):
     return "", states.get(status, 500)
 
 
+def register_manager(name, obj, override=False):
+    if not override and name in managers:
+        raise ValueError("Manager already registered")
+    managers[name] = obj
+
+
 def get_manager():
     manager = os.environ.get("API_MANAGER", "ec2")
     manager_class = managers.get(manager)
