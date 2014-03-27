@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-import cStringIO as StringIO
 import os
 import urlparse
 import subprocess
@@ -117,13 +116,13 @@ class EC2Manager(object):
             key_file = tempfile.NamedTemporaryFile(delete=True)
             key_file.write(priv_key)
             cmds.extend(["-i", key_file.name])
-        out = StringIO.StringIO()
         cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'
         cmd = cmd.format(self.vcl_template().format(app_addr))
         cmds.extend(["-o", "StrictHostKeyChecking no", cmd])
-        exit_status = subprocess.call(cmds, stdout=out, stderr=out)
-        out.seek(0)
-        out = out.read()
+        p = subprocess.Popen(cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        comm = p.communicate()
+        exit_status = p.returncode
+        out = comm[0] or comm[1]
         if exit_status != 0:
             msg = "[ERROR] Failed to write VCL file in the instance {0}: {1}"
             sys.stderr.write(msg.format(instance_addr, out))

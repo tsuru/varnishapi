@@ -3,6 +3,7 @@
 # license that can be found in the LICENSE file.
 
 import os
+import subprocess
 import unittest
 
 from mock import Mock, patch
@@ -338,9 +339,11 @@ apt-get install -y varnish vim-nox
         manager = ec2.EC2Manager(None)
         self.assertEqual(ec2.VCL_TEMPLATE, manager.vcl_template())
 
-    @patch("subprocess.call")
+    @patch("subprocess.Popen")
     def test_write_vcl(self, sp_mock):
-        sp_mock.return_value = 0
+        popen = Mock(returncode=0)
+        popen.communicate.return_value = ("out", "")
+        sp_mock.return_value = popen
         app_host = "myapp.cloud.tsuru.io"
         instance_ip = "10.2.2.1"
         manager = ec2.EC2Manager(None)
@@ -348,12 +351,13 @@ apt-get install -y varnish vim-nox
         cmd = "sudo bash -c \"echo '{0}' > /etc/varnish/default.vcl && service varnish reload\""
         cmd = cmd.format(manager.vcl_template().format(app_host))
         expected = ["ssh", instance_ip, "-l", "ubuntu", "-o", "StrictHostKeyChecking no", cmd]
-        cmd_arg = sp_mock.call_args_list[0][0][0]
-        self.assertEqual(expected, cmd_arg)
+        sp_mock.assert_called_with(expected, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    @patch("subprocess.call")
+    @patch("subprocess.Popen")
     def test_write_vcl_custom_user(self, sp_mock):
-        sp_mock.return_value = 0
+        popen = Mock(returncode=0)
+        popen.communicate.return_value = ("out", "")
+        sp_mock.return_value = popen
         os.environ["SSH_USER"] = "root"
 
         def clean():
@@ -367,17 +371,18 @@ apt-get install -y varnish vim-nox
         cmd = "sudo bash -c \"echo '{0}' > /etc/varnish/default.vcl && service varnish reload\""
         cmd = cmd.format(manager.vcl_template().format(app_host))
         expected = ["ssh", instance_ip, "-l", "root", "-o", "StrictHostKeyChecking no", cmd]
-        cmd_arg = sp_mock.call_args_list[0][0][0]
-        self.assertEqual(expected, cmd_arg)
+        sp_mock.assert_called_with(expected, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    @patch("subprocess.call")
+    @patch("subprocess.Popen")
     @patch("tempfile.NamedTemporaryFile")
     def test_write_vcl_key_from_storage(self, tempfile_mock, sp_mock):
         f = open("/tmp/temporary_test_file_feaas", "w+")
         self.addCleanup(f.close)
         self.addCleanup(os.unlink, "/tmp/temporary_test_file_feaas")
         tempfile_mock.return_value = f
-        sp_mock.return_value = 0
+        popen = Mock(returncode=0)
+        popen.communicate.return_value = ("out", "")
+        sp_mock.return_value = popen
         os.environ["LOAD_KEY_FROM_STORAGE"] = "1"
 
         def clean():
@@ -395,19 +400,17 @@ apt-get install -y varnish vim-nox
         expected = ["ssh", instance_ip, "-l", "root",
                     "-i", "/tmp/temporary_test_file_feaas",
                     "-o", "StrictHostKeyChecking no", cmd]
-        cmd_arg = sp_mock.call_args_list[0][0][0]
-        self.assertEqual(expected, cmd_arg)
+        sp_mock.assert_called_with(expected, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         f.seek(0)
         self.assertEqual("private_key", f.read())
         tempfile_mock.assert_called_with(delete=True)
 
-    @patch("subprocess.call")
+    @patch("subprocess.Popen")
     @patch("sys.stderr")
     def test_write_vcl_failure_stdout(self, stderr_mock, sp_mock):
-        def side_effect(*args, **kwargs):
-            kwargs["stdout"].write("something went wrong")
-        sp_mock.side_effect = side_effect
-        sp_mock.return_value = 1
+        popen = Mock(returncode=1)
+        popen.communicate.return_value = ("something went wrong", "")
+        sp_mock.return_value = popen
         app_host = "myapp.cloud.tsuru.io"
         instance_ip = "10.2.2.1"
         manager = ec2.EC2Manager(None)
@@ -419,13 +422,12 @@ apt-get install -y varnish vim-nox
         msg = "[ERROR] Failed to write VCL file in the instance {0}: something went wrong"
         stderr_mock.write.assert_called_with(msg.format(instance_ip))
 
-    @patch("subprocess.call")
+    @patch("subprocess.Popen")
     @patch("sys.stderr")
     def test_write_vcl_failure_stderr(self, stderr_mock, sp_mock):
-        def side_effect(*args, **kwargs):
-            kwargs["stderr"].write("something went wrong")
-        sp_mock.side_effect = side_effect
-        sp_mock.return_value = 1
+        popen = Mock(returncode=1)
+        popen.communicate.return_value = ("", "something went wrong")
+        sp_mock.return_value = popen
         app_host = "myapp.cloud.tsuru.io"
         instance_ip = "10.2.2.1"
         manager = ec2.EC2Manager(None)
