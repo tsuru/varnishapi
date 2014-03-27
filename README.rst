@@ -1,8 +1,8 @@
 Varnish service API for tsuru PaaS
 ==================================
 
-.. image:: https://travis-ci.org/globocom/varnishapi.png?branch=master
-   :target: https://travis-ci.org/globocom/varnishapi
+.. image:: https://travis-ci.org/tsuru/varnishapi.png?branch=master
+   :target: https://travis-ci.org/tsuru/varnishapi
 Deploying the API
 -----------------
 
