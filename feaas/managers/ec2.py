@@ -12,6 +12,8 @@ from feaas import storage
 
 VCL_TEMPLATE = (r""" "director app dns {{ {{ .backend = {{ .host = \"{0}\"; """
                 r""".port = \"80\"; }} }} .ttl = 5m; }}" """)
+DUMP_VCL_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
+                                             "misc", "dump_vcls.bash"))
 
 
 class EC2Manager(object):
@@ -74,7 +76,11 @@ class EC2Manager(object):
                                "sed -i -e 's/-T localhost:6082/-T :6082/' /etc/default/varnish",
                                "sed -i -e 's/-a :6081/-a :8080/' /etc/default/varnish",
                                "echo {0} > /etc/varnish/secret".format(secret),
-                               "service varnish restart"]
+                               "service varnish restart",
+                               "cat > /etc/cron.hourly/dump_vcls <<END",
+                               open(DUMP_VCL_FILE).read(),
+                               "END",
+                               "chmod +x /etc/cron.hourly/dump_vcls"]
         if user_data_lines:
             return "\n".join(user_data_lines) + "\n"
 

@@ -149,7 +149,11 @@ sed -i -e 's/-T localhost:6082/-T :6082/' /etc/default/varnish
 sed -i -e 's/-a :6081/-a :8080/' /etc/default/varnish
 echo abacaxi > /etc/varnish/secret
 service varnish restart
-"""
+cat > /etc/cron.hourly/dump_vcls <<END
+{0}
+END
+chmod +x /etc/cron.hourly/dump_vcls
+""".format(open(ec2.DUMP_VCL_FILE).read())
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
                                                    user_data=user_data)
