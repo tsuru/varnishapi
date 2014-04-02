@@ -19,10 +19,6 @@ class EC2ManagerTestCase(unittest.TestCase):
         os.environ["EC2_SECRET_KEY"] = cls.secret_key = "secret"
         os.environ["AMI_ID"] = cls.ami_id = "ami-123"
         os.environ["SUBNET_ID"] = cls.subnet_id = "subnet-123"
-        os.environ["KEY_PATH"] = cls.key_path = "/tmp/testkey.pub"
-        f = file(cls.key_path, "w")
-        f.write("testkey 123")
-        f.close()
 
     def setUp(self):
         os.environ["EC2_ENDPOINT"] = "http://amazonaws.com"
@@ -116,17 +112,9 @@ class EC2ManagerTestCase(unittest.TestCase):
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         manager.add_instance("someapp")
-        f = open(self.key_path)
-        key = f.read()
-        f.close()
-        user_data = """mkdir -p /home/ubuntu/.ssh
-cat >> /home/ubuntu/.ssh/authorized_keys <<END
-{0}
-END
-""".format(key)
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
-                                                   user_data=user_data)
+                                                   user_data=None)
         storage.store.assert_called_once()
 
     @patch("sys.stderr")
@@ -139,57 +127,10 @@ END
         msg = "[ERROR] Failed to create EC2 instance: Something went wrong"
         stderr_mock.write.assert_called_with(msg)
 
-    def test_add_instance_no_key_path(self):
-        del os.environ["KEY_PATH"]
-
-        def recover():
-            os.environ["KEY_PATH"] = self.key_path
-        self.addCleanup(recover)
-        conn = Mock()
-        conn.run_instances.return_value = self.get_fake_reservation(
-            instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
-        )
-        storage = Mock()
-        manager = ec2.EC2Manager(storage)
-        manager._connection = conn
-        manager.add_instance("someapp")
-        conn.run_instances.assert_called_once_with(image_id=self.ami_id,
-                                                   subnet_id=self.subnet_id,
-                                                   user_data=None)
-        storage.store.assert_called_once()
-
-    def test_add_instance_key_from_storage(self):
-        os.environ["LOAD_KEY_FROM_STORAGE"] = "1"
-
-        def recover():
-            del os.environ["LOAD_KEY_FROM_STORAGE"]
-        self.addCleanup(recover)
-        conn = Mock()
-        conn.run_instances.return_value = self.get_fake_reservation(
-            instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
-        )
-        storage = Mock()
-        storage.retrieve_public_key.return_value = "public_key"
-        manager = ec2.EC2Manager(storage)
-        manager._connection = conn
-        manager.add_instance("someapp")
-        user_data = """mkdir -p /home/ubuntu/.ssh
-cat >> /home/ubuntu/.ssh/authorized_keys <<END
-public_key
-END
-"""
-        conn.run_instances.assert_called_once_with(image_id=self.ami_id,
-                                                   subnet_id=self.subnet_id,
-                                                   user_data=user_data)
-        storage.store.assert_called_once()
-        storage.retrieve_public_key.assert_called_once()
-
     def test_add_instance_packages(self):
         os.environ["API_PACKAGES"] = "varnish vim-nox"
-        del os.environ["KEY_PATH"]
 
         def recover():
-            os.environ["KEY_PATH"] = self.key_path
             del os.environ["API_PACKAGES"]
         self.addCleanup(recover)
         conn = Mock()
@@ -203,35 +144,6 @@ END
         user_data = """apt-get update
 apt-get install -y varnish vim-nox
 """
-        conn.run_instances.assert_called_once_with(image_id=self.ami_id,
-                                                   subnet_id=self.subnet_id,
-                                                   user_data=user_data)
-        storage.store.assert_called_once()
-
-    def test_add_instance_packages_and_key_path(self):
-        os.environ["API_PACKAGES"] = "varnish vim-nox"
-
-        def recover():
-            del os.environ["API_PACKAGES"]
-        self.addCleanup(recover)
-        conn = Mock()
-        conn.run_instances.return_value = self.get_fake_reservation(
-            instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
-        )
-        storage = Mock()
-        manager = ec2.EC2Manager(storage)
-        manager._connection = conn
-        manager.add_instance("someapp")
-        f = open(self.key_path)
-        key = f.read()
-        f.close()
-        user_data = """mkdir -p /home/ubuntu/.ssh
-cat >> /home/ubuntu/.ssh/authorized_keys <<END
-{0}
-END
-apt-get update
-apt-get install -y varnish vim-nox
-""".format(key)
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
                                                    user_data=user_data)
