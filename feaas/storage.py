@@ -13,17 +13,18 @@ class InstanceNotFoundError(Exception):
 
 class Instance(object):
 
-    def __init__(self, name=None, dns_name=None, id=None):
+    def __init__(self, name=None, dns_name=None, id=None, secret=None):
         self.name = name
         self.dns_name = dns_name
         self.id = id
+        self.secret = secret
 
     def to_json(self):
         return json.dumps(self.to_dict())
 
     def to_dict(self):
         return {"name": self.name, "dns_name": self.dns_name,
-                "id": self.id}
+                "id": self.id, "secret": self.secret}
 
 
 class MongoDBStorage(object):

@@ -17,7 +17,7 @@ class InstanceTestCase(unittest.TestCase):
                                     dns_name="instance.cloud.tsuru.io",
                                     id="i-0800")
         expected = {"id": "i-0800", "dns_name": "instance.cloud.tsuru.io",
-                    "name": "myinstance"}
+                    "name": "myinstance", "secret": None}
         self.assertEqual(expected, instance.to_dict())
 
     def test_to_json(self):
@@ -26,7 +26,7 @@ class InstanceTestCase(unittest.TestCase):
                                     id="i-0800")
         json_str = instance.to_json()
         expected = {"id": "i-0800", "dns_name": "instance.cloud.tsuru.io",
-                    "name": "myinstance"}
+                    "name": "myinstance", "secret": None}
         self.assertEqual(expected, json.loads(json_str))
 
 
@@ -49,7 +49,8 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.storage.store(instance)
         instance = self.client.feaas_test.instances.find_one({"name": "secret"})
         expected = {"id": "i-0800", "name": "secret",
-                    "dns_name": "secret.pos.com", "_id": instance["_id"]}
+                    "dns_name": "secret.pos.com", "_id": instance["_id"],
+                    "secret": None}
         self.assertEqual(expected, instance)
 
     def test_retrieve(self):
