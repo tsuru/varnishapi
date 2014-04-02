@@ -1,2 +1,3 @@
 include *.rst
+include feaas/misc/dump_vcls.bash
 prune tests
