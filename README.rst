@@ -71,16 +71,6 @@ subnet ID via the ``SUBNET_ID`` environment variable.
 
     % tsuru env-set SUBNET_ID=your-subnet-id
 
-The API also needs a SSH key in order to comunicate with the service instances'
-VMs. You will need to store the key in the application machine and export the
-environment variable ``KEY_PATH``:
-
-.. highlight: bash
-
-::
-
-    % tsuru env-set KEY_PATH=/home/ubuntu/.ssh/id_rsa.pub
-
 One more thing: this API will use MongoDB to store information about instances,
 the MongoDB endpoint and the database name is also controlled via environment
 variables:
