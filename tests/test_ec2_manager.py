@@ -127,7 +127,9 @@ class EC2ManagerTestCase(unittest.TestCase):
         msg = "[ERROR] Failed to create EC2 instance: Something went wrong"
         stderr_mock.write.assert_called_with(msg)
 
-    def test_add_instance_packages(self):
+    @patch("uuid.uuid4")
+    def test_add_instance_packages(self, uuid4):
+        uuid4.return_value = u"abacaxi"
         os.environ["API_PACKAGES"] = "varnish vim-nox"
 
         def recover():
@@ -143,6 +145,10 @@ class EC2ManagerTestCase(unittest.TestCase):
         manager.add_instance("someapp")
         user_data = """apt-get update
 apt-get install -y varnish vim-nox
+sed -i -e 's/-T localhost:6082/-T :6082/' /etc/default/varnish
+sed -i -e 's/-a :6081/-a :8080/' /etc/default/varnish
+echo abacaxi > /etc/varnish/secret
+service varnish restart
 """
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,

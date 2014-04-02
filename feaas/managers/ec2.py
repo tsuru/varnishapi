@@ -4,6 +4,7 @@
 
 import os
 import urlparse
+import uuid
 import sys
 
 import varnish
@@ -50,30 +51,32 @@ class EC2Manager(object):
         ami_id = os.environ.get("AMI_ID")
         subnet_id = os.environ.get("SUBNET_ID")
         reservation = None
+        secret = unicode(uuid.uuid4())
         try:
             reservation = self.connection.run_instances(image_id=ami_id,
                                                         subnet_id=subnet_id,
-                                                        user_data=self._user_data())
+                                                        user_data=self._user_data(secret))
             for instance in reservation.instances:
                 self.storage.store(storage.Instance(id=instance.id,
                                                     dns_name=instance.dns_name,
-                                                    name=name))
+                                                    name=name, secret=secret))
         except Exception as e:
             sys.stderr.write("[ERROR] Failed to create EC2 instance: %s" %
                              " ".join(e.args))
         return reservation
 
-    def _user_data(self):
-        user_data_lines = self._packages()
-        if user_data_lines:
-            return "\n".join(user_data_lines) + "\n"
-
-    def _packages(self):
+    def _user_data(self, secret):
+        user_data_lines = None
         packages = os.environ.get("API_PACKAGES")
         if packages:
-            return ["apt-get update",
-                    "apt-get install -y {0}".format(packages)]
-        return []
+            user_data_lines = ["apt-get update",
+                               "apt-get install -y {0}".format(packages),
+                               "sed -i -e 's/-T localhost:6082/-T :6082/' /etc/default/varnish",
+                               "sed -i -e 's/-a :6081/-a :8080/' /etc/default/varnish",
+                               "echo {0} > /etc/varnish/secret".format(secret),
+                               "service varnish restart"]
+        if user_data_lines:
+            return "\n".join(user_data_lines) + "\n"
 
     def bind(self, name, app_host):
         instance_addr = self._get_instance_addr(name)
