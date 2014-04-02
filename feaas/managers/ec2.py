@@ -9,7 +9,8 @@ import sys
 import varnish
 from feaas import storage
 
-VCL_TEMPLATE = r""" "director app dns {{ {{ .backend = {{ .host = \"{0}\"; .port = \"80\"; }} }} .ttl = 5m; }}" """
+VCL_TEMPLATE = (r""" "director app dns {{ {{ .backend = {{ .host = \"{0}\"; """
+                r""".port = \"80\"; }} }} .ttl = 5m; }}" """)
 
 
 class EC2Manager(object):
