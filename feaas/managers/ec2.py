@@ -64,8 +64,7 @@ class EC2Manager(object):
         return reservation
 
     def _user_data(self):
-        user_data_lines = []
-        user_data_lines.extend(self._packages())
+        user_data_lines = self._packages()
         if user_data_lines:
             return "\n".join(user_data_lines) + "\n"
 
