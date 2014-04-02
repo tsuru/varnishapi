@@ -3,7 +3,6 @@
 # license that can be found in the LICENSE file.
 
 import os
-import subprocess
 import unittest
 
 from mock import Mock, patch
@@ -306,12 +305,12 @@ apt-get install -y varnish vim-nox
         storage.retrieve.return_value = api_storage.Instance(id="i-0800")
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
-        write_vcl = Mock()
-        manager.write_vcl = write_vcl
+        remove_vcl = Mock()
+        manager.remove_vcl = remove_vcl
         manager.unbind("someapp", "myapp.cloud.tsuru.io")
         storage.retrieve.assert_called_with(name="someapp")
         conn.get_all_instances.assert_called_with(instance_ids=["i-0800"])
-        write_vcl.assert_called_with("10.2.2.1", "localhost")
+        remove_vcl.assert_called_with("10.2.2.1")
 
     def test_unbind_instance_no_reservation(self):
         conn = Mock()
@@ -339,102 +338,41 @@ apt-get install -y varnish vim-nox
         manager = ec2.EC2Manager(None)
         self.assertEqual(ec2.VCL_TEMPLATE, manager.vcl_template())
 
-    @patch("subprocess.Popen")
-    def test_write_vcl(self, sp_mock):
-        popen = Mock(returncode=0)
-        popen.communicate.return_value = ("out", "")
-        sp_mock.return_value = popen
-        app_host = "myapp.cloud.tsuru.io"
-        instance_ip = "10.2.2.1"
-        manager = ec2.EC2Manager(None)
-        manager.write_vcl(instance_ip, app_host)
-        cmd = "sudo bash -c \"echo '{0}' > /etc/varnish/default.vcl && service varnish reload\""
-        cmd = cmd.format(manager.vcl_template().format(app_host))
-        expected = ["ssh", instance_ip, "-l", "ubuntu", "-o", "StrictHostKeyChecking no", cmd]
-        sp_mock.assert_called_with(expected, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    @patch("subprocess.Popen")
-    def test_write_vcl_custom_user(self, sp_mock):
-        popen = Mock(returncode=0)
-        popen.communicate.return_value = ("out", "")
-        sp_mock.return_value = popen
-        os.environ["SSH_USER"] = "root"
+    @patch("varnish.VarnishHandler")
+    def test_write_vcl(self, VarnishHandler):
+        os.environ["SECRET"] = "abc-def"
 
         def clean():
-            del os.environ["SSH_USER"]
-            reload(ec2)
-        reload(ec2)
-        app_host = "myapp.cloud.tsuru.io"
-        instance_ip = "10.2.2.1"
+            del os.environ["SECRET"]
+        self.addCleanup(clean)
+        varnish_handler = Mock()
+        VarnishHandler.return_value = varnish_handler
+        app_host, instance_ip = "yeah.cloud.tsuru.io", "10.2.1.2"
         manager = ec2.EC2Manager(None)
         manager.write_vcl(instance_ip, app_host)
-        cmd = "sudo bash -c \"echo '{0}' > /etc/varnish/default.vcl && service varnish reload\""
-        cmd = cmd.format(manager.vcl_template().format(app_host))
-        expected = ["ssh", instance_ip, "-l", "root", "-o", "StrictHostKeyChecking no", cmd]
-        sp_mock.assert_called_with(expected, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        vcl = manager.vcl_template().format(app_host)
+        VarnishHandler.assert_called_with("{0}:6082".format(instance_ip),
+                                          secret="abc-def")
+        varnish_handler.vcl_inline.assert_called_with("feaas", vcl)
+        varnish_handler.vcl_use.assert_called_with("feaas")
+        varnish_handler.quit.assert_called()
 
-    @patch("subprocess.Popen")
-    @patch("tempfile.NamedTemporaryFile")
-    def test_write_vcl_key_from_storage(self, tempfile_mock, sp_mock):
-        f = open("/tmp/temporary_test_file_feaas", "w+")
-        self.addCleanup(f.close)
-        self.addCleanup(os.unlink, "/tmp/temporary_test_file_feaas")
-        tempfile_mock.return_value = f
-        popen = Mock(returncode=0)
-        popen.communicate.return_value = ("out", "")
-        sp_mock.return_value = popen
-        os.environ["LOAD_KEY_FROM_STORAGE"] = "1"
+    @patch("varnish.VarnishHandler")
+    def test_remove_vcl(self, VarnishHandler):
+        os.environ["SECRET"] = "abc123"
 
         def clean():
-            del os.environ["LOAD_KEY_FROM_STORAGE"]
-            reload(ec2)
-        reload(ec2)
-        app_host = "myapp.cloud.tsuru.io"
-        instance_ip = "10.2.2.1"
-        storage = Mock()
-        storage.retrieve_private_key.return_value = "private_key"
-        manager = ec2.EC2Manager(storage)
-        manager.write_vcl(instance_ip, app_host)
-        cmd = "sudo bash -c \"echo '{0}' > /etc/varnish/default.vcl && service varnish reload\""
-        cmd = cmd.format(manager.vcl_template().format(app_host))
-        expected = ["ssh", instance_ip, "-l", "root",
-                    "-i", "/tmp/temporary_test_file_feaas",
-                    "-o", "StrictHostKeyChecking no", cmd]
-        sp_mock.assert_called_with(expected, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        f.seek(0)
-        self.assertEqual("private_key", f.read())
-        tempfile_mock.assert_called_with(delete=True)
-
-    @patch("subprocess.Popen")
-    @patch("sys.stderr")
-    def test_write_vcl_failure_stdout(self, stderr_mock, sp_mock):
-        popen = Mock(returncode=1)
-        popen.communicate.return_value = ("something went wrong", "")
-        sp_mock.return_value = popen
-        app_host = "myapp.cloud.tsuru.io"
+            del os.environ["SECRET"]
+        self.addCleanup(clean)
+        varnish_handler = Mock()
+        VarnishHandler.return_value = varnish_handler
         instance_ip = "10.2.2.1"
         manager = ec2.EC2Manager(None)
-        with self.assertRaises(Exception) as cm:
-            manager.write_vcl(instance_ip, app_host)
-        exc = cm.exception
-        self.assertEqual(("Could not connect to the service instance",),
-                         exc.args)
-        msg = "[ERROR] Failed to write VCL file in the instance {0}: something went wrong"
-        stderr_mock.write.assert_called_with(msg.format(instance_ip))
-
-    @patch("subprocess.Popen")
-    @patch("sys.stderr")
-    def test_write_vcl_failure_stderr(self, stderr_mock, sp_mock):
-        popen = Mock(returncode=1)
-        popen.communicate.return_value = ("", "something went wrong")
-        sp_mock.return_value = popen
-        app_host = "myapp.cloud.tsuru.io"
-        instance_ip = "10.2.2.1"
-        manager = ec2.EC2Manager(None)
-        with self.assertRaises(Exception):
-            manager.write_vcl(instance_ip, app_host)
-        msg = "[ERROR] Failed to write VCL file in the instance {0}: something went wrong"
-        stderr_mock.write.assert_called_with(msg.format(instance_ip))
+        manager.remove_vcl(instance_ip)
+        VarnishHandler.assert_called_with("10.2.2.1:6082", secret="abc123")
+        varnish_handler.vcl_use.assert_called_with("boot")
+        varnish_handler.vcl_discard.assert_called_with("feaas")
+        varnish_handler.quit.assert_called()
 
     def test_info(self):
         instance = api_storage.Instance("secret", "secret.cloud.tsuru.io", "i-0800")

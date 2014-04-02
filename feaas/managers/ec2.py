@@ -4,17 +4,12 @@
 
 import os
 import urlparse
-import subprocess
 import sys
-import tempfile
 
+import varnish
 from feaas import storage
 
-VCL_TEMPLATE = """backend default {{
-    .host = \\"{0}\\";
-    .port = \\"80\\";
-}}
-"""
+VCL_TEMPLATE = r""" "director app dns {{ {{ .backend = {{ .host = \"{0}\"; .port = \"80\"; }} }} .ttl = 5m; }}" """
 
 
 class EC2Manager(object):
@@ -95,38 +90,36 @@ class EC2Manager(object):
         return []
 
     def bind(self, name, app_host):
-        self._set_backend(name, app_host)
+        instance_addr = self._get_instance_addr(name)
+        self.write_vcl(instance_addr, app_host)
 
     def unbind(self, name, app_host):
-        self._set_backend(name, "localhost")
+        instance_addr = self._get_instance_addr(name)
+        self.remove_vcl(instance_addr)
 
-    def _set_backend(self, name, backend):
+    def _get_instance_addr(self, name):
         instance = self.storage.retrieve(name=name)
         reservations = self.connection.get_all_instances(instance_ids=[instance.id])
         if len(reservations) == 0 or len(reservations[0].instances) == 0:
             raise storage.InstanceNotFoundError()
-        instance_ip = reservations[0].instances[0].private_ip_address
-        self.write_vcl(instance_ip, backend)
+        return reservations[0].instances[0].private_ip_address
 
     def write_vcl(self, instance_addr, app_addr):
-        user = os.environ.get("SSH_USER", "ubuntu")
-        cmds = ["ssh", instance_addr, "-l", user]
-        if os.environ.get("LOAD_KEY_FROM_STORAGE"):
-            priv_key = self.storage.retrieve_private_key()
-            key_file = tempfile.NamedTemporaryFile(delete=True)
-            key_file.write(priv_key)
-            cmds.extend(["-i", key_file.name])
-        cmd = 'sudo bash -c "echo \'{0}\' > /etc/varnish/default.vcl && service varnish reload"'
-        cmd = cmd.format(self.vcl_template().format(app_addr))
-        cmds.extend(["-o", "StrictHostKeyChecking no", cmd])
-        p = subprocess.Popen(cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        comm = p.communicate()
-        exit_status = p.returncode
-        out = comm[0] or comm[1]
-        if exit_status != 0:
-            msg = "[ERROR] Failed to write VCL file in the instance {0}: {1}"
-            sys.stderr.write(msg.format(instance_addr, out))
-            raise Exception("Could not connect to the service instance")
+        secret = os.environ.get("SECRET")
+        vcl = self.vcl_template().format(app_addr)
+        handler = varnish.VarnishHandler("{0}:6082".format(instance_addr),
+                                         secret=secret)
+        handler.vcl_inline("feaas", vcl)
+        handler.vcl_use("feaas")
+        handler.quit()
+
+    def remove_vcl(self, instance_addr):
+        secret = os.environ.get("SECRET")
+        handler = varnish.VarnishHandler("{0}:6082".format(instance_addr),
+                                         secret=secret)
+        handler.vcl_use("boot")
+        handler.vcl_discard("feaas")
+        handler.quit()
 
     def vcl_template(self):
         return VCL_TEMPLATE
