@@ -16,7 +16,7 @@ setup(
     version=__version__,
     description="Frontend as-a-service API for Tsuru PaaS",
     long_description=README,
-    author="CobraTeam",
+    author="Tsuru",
     author_email="tsuru@corp.globo.com",
     classifiers=[
         "Programming Language :: Python :: 2.7",
