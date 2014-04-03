@@ -77,7 +77,7 @@ class EC2Manager(object):
                                "sed -i -e 's/-a :6081/-a :8080/' /etc/default/varnish",
                                "echo {0} > /etc/varnish/secret".format(secret),
                                "service varnish restart",
-                               "cat > /etc/cron.hourly/dump_vcls <<END",
+                               "cat > /etc/cron.hourly/dump_vcls <<'END'",
                                open(DUMP_VCL_FILE).read(),
                                "END",
                                "chmod +x /etc/cron.hourly/dump_vcls"]

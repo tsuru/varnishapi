@@ -149,7 +149,7 @@ sed -i -e 's/-T localhost:6082/-T :6082/' /etc/default/varnish
 sed -i -e 's/-a :6081/-a :8080/' /etc/default/varnish
 echo abacaxi > /etc/varnish/secret
 service varnish restart
-cat > /etc/cron.hourly/dump_vcls <<END
+cat > /etc/cron.hourly/dump_vcls <<'END'
 {0}
 END
 chmod +x /etc/cron.hourly/dump_vcls
