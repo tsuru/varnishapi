@@ -186,7 +186,8 @@ chmod +x /etc/cron.hourly/dump_vcls
             instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1"}],
         )]
         storage = Mock()
-        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
+        storage.retrieve.return_value = api_storage.Instance(id="i-0800",
+                                                             secret="abc-123")
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         write_vcl = Mock()
@@ -194,7 +195,7 @@ chmod +x /etc/cron.hourly/dump_vcls
         manager.bind("someapp", "myapp.cloud.tsuru.io")
         storage.retrieve.assert_called_with(name="someapp")
         conn.get_all_instances.assert_called_with(instance_ids=["i-0800"])
-        write_vcl.assert_called_with("10.2.2.1", "myapp.cloud.tsuru.io")
+        write_vcl.assert_called_with("10.2.2.1", "abc-123", "myapp.cloud.tsuru.io")
 
     def test_bind_instance_no_reservation(self):
         conn = Mock()
@@ -224,7 +225,8 @@ chmod +x /etc/cron.hourly/dump_vcls
             instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1"}],
         )]
         storage = Mock()
-        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
+        storage.retrieve.return_value = api_storage.Instance(id="i-0800",
+                                                             secret="abc-123")
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         remove_vcl = Mock()
@@ -232,7 +234,7 @@ chmod +x /etc/cron.hourly/dump_vcls
         manager.unbind("someapp", "myapp.cloud.tsuru.io")
         storage.retrieve.assert_called_with(name="someapp")
         conn.get_all_instances.assert_called_with(instance_ids=["i-0800"])
-        remove_vcl.assert_called_with("10.2.2.1")
+        remove_vcl.assert_called_with("10.2.2.1", "abc-123")
 
     def test_unbind_instance_no_reservation(self):
         conn = Mock()
@@ -262,16 +264,11 @@ chmod +x /etc/cron.hourly/dump_vcls
 
     @patch("varnish.VarnishHandler")
     def test_write_vcl(self, VarnishHandler):
-        os.environ["SECRET"] = "abc-def"
-
-        def clean():
-            del os.environ["SECRET"]
-        self.addCleanup(clean)
         varnish_handler = Mock()
         VarnishHandler.return_value = varnish_handler
         app_host, instance_ip = "yeah.cloud.tsuru.io", "10.2.1.2"
         manager = ec2.EC2Manager(None)
-        manager.write_vcl(instance_ip, app_host)
+        manager.write_vcl(instance_ip, "abc-def", app_host)
         vcl = manager.vcl_template().format(app_host)
         VarnishHandler.assert_called_with("{0}:6082".format(instance_ip),
                                           secret="abc-def")
@@ -281,16 +278,11 @@ chmod +x /etc/cron.hourly/dump_vcls
 
     @patch("varnish.VarnishHandler")
     def test_remove_vcl(self, VarnishHandler):
-        os.environ["SECRET"] = "abc123"
-
-        def clean():
-            del os.environ["SECRET"]
-        self.addCleanup(clean)
         varnish_handler = Mock()
         VarnishHandler.return_value = varnish_handler
         instance_ip = "10.2.2.1"
         manager = ec2.EC2Manager(None)
-        manager.remove_vcl(instance_ip)
+        manager.remove_vcl(instance_ip, "abc123")
         VarnishHandler.assert_called_with("10.2.2.1:6082", secret="abc123")
         varnish_handler.vcl_use.assert_called_with("boot")
         varnish_handler.vcl_discard.assert_called_with("feaas")

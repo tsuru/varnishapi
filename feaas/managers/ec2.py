@@ -85,22 +85,21 @@ class EC2Manager(object):
             return "\n".join(user_data_lines) + "\n"
 
     def bind(self, name, app_host):
-        instance_addr = self._get_instance_addr(name)
-        self.write_vcl(instance_addr, app_host)
+        instance_addr, secret = self._get_instance_addr(name)
+        self.write_vcl(instance_addr, secret, app_host)
 
     def unbind(self, name, app_host):
-        instance_addr = self._get_instance_addr(name)
-        self.remove_vcl(instance_addr)
+        instance_addr, secret = self._get_instance_addr(name)
+        self.remove_vcl(instance_addr, secret)
 
     def _get_instance_addr(self, name):
         instance = self.storage.retrieve(name=name)
         reservations = self.connection.get_all_instances(instance_ids=[instance.id])
         if len(reservations) == 0 or len(reservations[0].instances) == 0:
             raise storage.InstanceNotFoundError()
-        return reservations[0].instances[0].private_ip_address
+        return reservations[0].instances[0].private_ip_address, instance.secret
 
-    def write_vcl(self, instance_addr, app_addr):
-        secret = os.environ.get("SECRET")
+    def write_vcl(self, instance_addr, secret, app_addr):
         vcl = self.vcl_template().format(app_addr)
         handler = varnish.VarnishHandler("{0}:6082".format(instance_addr),
                                          secret=secret)
@@ -108,8 +107,7 @@ class EC2Manager(object):
         handler.vcl_use("feaas")
         handler.quit()
 
-    def remove_vcl(self, instance_addr):
-        secret = os.environ.get("SECRET")
+    def remove_vcl(self, instance_addr, secret):
         handler = varnish.VarnishHandler("{0}:6082".format(instance_addr),
                                          secret=secret)
         handler.vcl_use("boot")
