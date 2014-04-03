@@ -124,7 +124,7 @@ class EC2Manager(object):
             self.storage.remove(name=name)
         except Exception as e:
             sys.stderr.write("[ERROR] Failed to terminate EC2 instance: %s" %
-                             " ".join(e.args))
+                             " ".join([str(arg) for arg in e.args]))
 
     def info(self, name):
         return self.storage.retrieve(name).to_dict()
