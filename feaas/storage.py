@@ -11,6 +11,10 @@ class InstanceNotFoundError(Exception):
     pass
 
 
+class InstanceAlreadyExistsError(Exception):
+    pass
+
+
 class Instance(object):
 
     def __init__(self, name=None, dns_name=None, id=None, secret=None):
