@@ -51,6 +51,7 @@ class EC2Manager(object):
                                  path=path, region=region)
 
     def add_instance(self, name):
+        self._check_duplicate(name)
         ami_id = os.environ.get("AMI_ID")
         subnet_id = os.environ.get("SUBNET_ID")
         reservation = None
@@ -67,6 +68,13 @@ class EC2Manager(object):
             sys.stderr.write("[ERROR] Failed to create EC2 instance: %s" %
                              " ".join(e.args))
         return reservation
+
+    def _check_duplicate(self, name):
+        try:
+            self.storage.retrieve(name)
+            raise storage.InstanceAlreadyExistsError()
+        except storage.InstanceNotFoundError:
+            pass
 
     def _user_data(self, secret):
         user_data_lines = None

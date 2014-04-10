@@ -109,6 +109,7 @@ class EC2ManagerTestCase(unittest.TestCase):
             instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
         )
         storage = Mock()
+        storage.retrieve.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         manager.add_instance("someapp")
@@ -117,11 +118,20 @@ class EC2ManagerTestCase(unittest.TestCase):
                                                    user_data=None)
         storage.store.assert_called_once()
 
+    def test_add_duplicate_instance(self):
+        storage = Mock()
+        storage.retrieve.return_value = "instance"
+        manager = ec2.EC2Manager(storage)
+        with self.assertRaises(api_storage.InstanceAlreadyExistsError):
+            manager.add_instance("pull")
+
     @patch("sys.stderr")
     def test_add_instance_ec2_failure(self, stderr_mock):
         conn = Mock()
         conn.run_instances.side_effect = ValueError("Something went wrong")
-        manager = ec2.EC2Manager(None)
+        storage = Mock()
+        storage.retrieve.side_effect = api_storage.InstanceNotFoundError()
+        manager = ec2.EC2Manager(storage)
         manager._connection = conn
         manager.add_instance("someapp")
         msg = "[ERROR] Failed to create EC2 instance: Something went wrong"
@@ -140,6 +150,7 @@ class EC2ManagerTestCase(unittest.TestCase):
             instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
         )
         storage = Mock()
+        storage.retrieve.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         manager.add_instance("someapp")
