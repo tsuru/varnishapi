@@ -95,14 +95,14 @@ class EC2Manager(object):
             return "\n".join(user_data_lines) + "\n"
 
     def bind(self, name, app_host):
-        instance_addr, secret = self._get_instance_addr(name)
+        instance_addr, secret = self.get_instance_addr(name)
         self.write_vcl(instance_addr, secret, app_host)
 
     def unbind(self, name, app_host):
-        instance_addr, secret = self._get_instance_addr(name)
+        instance_addr, secret = self.get_instance_addr(name)
         self.remove_vcl(instance_addr, secret)
 
-    def _get_instance_addr(self, name):
+    def get_instance_addr(self, name):
         instance = self.storage.retrieve(name=name)
         reservations = self.connection.get_all_instances(instance_ids=[instance.id])
         if len(reservations) == 0 or len(reservations[0].instances) == 0:
