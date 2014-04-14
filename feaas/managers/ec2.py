@@ -11,8 +11,9 @@ import varnish
 from feaas import storage
 
 VCL_TEMPLATE = (r""" "director app dns {{ {{ .backend = {{ .host = \"{0}\"; """
-                r""".port = \"80\"; }} }} .ttl = 5m; }} sub vcl_recv """
-                r"""{{ if(req.url ~ \"/_varnish_healthcheck\") """
+                r""".port = \"80\"; }} }} .ttl = 5m; }} sub vcl_recv {{"""
+                r""" set req.http.X-Host = req.http.host; set req.http.Host = \"{0}\";"""
+                r""" if(req.url ~ \"/_varnish_healthcheck\") """
                 r"""{{ error 200 \"WORKING\"; set req.http.Connection = \"close\"; }} }}" """)
 DUMP_VCL_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
                                              "misc", "dump_vcls.bash"))
