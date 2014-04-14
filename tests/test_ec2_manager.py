@@ -192,82 +192,28 @@ chmod +x /etc/cron.hourly/dump_vcls
         stderr_mock.write.assert_called_with(msg)
 
     def test_bind_instance(self):
-        conn = Mock()
-        conn.get_all_instances.return_value = [self.get_fake_reservation(
-            instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1"}],
-        )]
         storage = Mock()
         storage.retrieve.return_value = api_storage.Instance(id="i-0800",
-                                                             secret="abc-123")
+                                                             secret="abc-123",
+                                                             dns_name="10.1.1.2")
         manager = ec2.EC2Manager(storage)
-        manager._connection = conn
         write_vcl = Mock()
         manager.write_vcl = write_vcl
         manager.bind("someapp", "myapp.cloud.tsuru.io")
         storage.retrieve.assert_called_with(name="someapp")
-        conn.get_all_instances.assert_called_with(instance_ids=["i-0800"])
-        write_vcl.assert_called_with("10.2.2.1", "abc-123", "myapp.cloud.tsuru.io")
-
-    def test_bind_instance_no_reservation(self):
-        conn = Mock()
-        conn.get_all_instances.return_value = []
-        storage = Mock()
-        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
-        manager = ec2.EC2Manager(storage)
-        manager._connection = conn
-        with self.assertRaises(api_storage.InstanceNotFoundError):
-            manager.bind("someapp", "yourapp.cloud.tsuru.io")
-
-    def test_bind_instance_instances_not_found(self):
-        conn = Mock()
-        conn.get_all_instances.return_value = [self.get_fake_reservation(
-            instances=[],
-        )]
-        storage = Mock()
-        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
-        manager = ec2.EC2Manager(storage)
-        manager._connection = conn
-        with self.assertRaises(api_storage.InstanceNotFoundError):
-            manager.bind("someapp", "yourapp.cloud.tsuru.io")
+        write_vcl.assert_called_with("10.1.1.2", "abc-123", "myapp.cloud.tsuru.io")
 
     def test_unbind_instance(self):
-        conn = Mock()
-        conn.get_all_instances.return_value = [self.get_fake_reservation(
-            instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1"}],
-        )]
         storage = Mock()
         storage.retrieve.return_value = api_storage.Instance(id="i-0800",
-                                                             secret="abc-123")
+                                                             secret="abc-123",
+                                                             dns_name="10.1.1.2")
         manager = ec2.EC2Manager(storage)
-        manager._connection = conn
         remove_vcl = Mock()
         manager.remove_vcl = remove_vcl
         manager.unbind("someapp", "myapp.cloud.tsuru.io")
         storage.retrieve.assert_called_with(name="someapp")
-        conn.get_all_instances.assert_called_with(instance_ids=["i-0800"])
-        remove_vcl.assert_called_with("10.2.2.1", "abc-123")
-
-    def test_unbind_instance_no_reservation(self):
-        conn = Mock()
-        conn.get_all_instances.return_value = []
-        storage = Mock()
-        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
-        manager = ec2.EC2Manager(storage)
-        manager._connection = conn
-        with self.assertRaises(api_storage.InstanceNotFoundError):
-            manager.unbind("someapp", "yourapp.cloud.tsuru.io")
-
-    def test_unbind_instance_instances_not_found(self):
-        conn = Mock()
-        conn.get_all_instances.return_value = [self.get_fake_reservation(
-            instances=[],
-        )]
-        storage = Mock()
-        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
-        manager = ec2.EC2Manager(storage)
-        manager._connection = conn
-        with self.assertRaises(api_storage.InstanceNotFoundError):
-            manager.unbind("someapp", "yourapp.cloud.tsuru.io")
+        remove_vcl.assert_called_with("10.1.1.2", "abc-123")
 
     def test_vcl_template(self):
         manager = ec2.EC2Manager(None)

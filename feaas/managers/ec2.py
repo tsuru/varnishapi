@@ -104,10 +104,7 @@ class EC2Manager(object):
 
     def get_instance_addr(self, name):
         instance = self.storage.retrieve(name=name)
-        reservations = self.connection.get_all_instances(instance_ids=[instance.id])
-        if len(reservations) == 0 or len(reservations[0].instances) == 0:
-            raise storage.InstanceNotFoundError()
-        return reservations[0].instances[0].private_ip_address, instance.secret
+        return instance.dns_name, instance.secret
 
     def write_vcl(self, instance_addr, secret, app_addr):
         vcl = self.vcl_template().format(app_addr)
