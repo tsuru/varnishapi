@@ -218,8 +218,10 @@ chmod +x /etc/cron.hourly/dump_vcls
     def test_vcl_template(self):
         manager = ec2.EC2Manager(None)
         with open(ec2.VCL_TEMPLATE_FILE) as f:
-            content = f.read().replace("\n", "").replace('"', r'\"')
-            self.assertEqual('"%s"' % content, manager.vcl_template())
+            content = f.read().replace("\n", " ").replace('"', r'\"')
+            content = content.replace("\t", "")
+            self.assertEqual('"%s"' % content.strip(),
+                             manager.vcl_template())
 
     @patch("varnish.VarnishHandler")
     def test_write_vcl(self, VarnishHandler):

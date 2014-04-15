@@ -123,9 +123,10 @@ class EC2Manager(object):
     def vcl_template(self):
         with codecs.open(VCL_TEMPLATE_FILE, encoding="utf-8") as f:
             content = f.read()
-            content = content.replace("\n", "")
+            content = content.replace("\n", " ")
             content = content.replace('"', r'\"')
-            return '"%s"' % content
+            content = content.replace("\t", "")
+            return '"%s"' % content.strip()
 
     def remove_instance(self, name):
         instance = self.storage.retrieve(name=name)
