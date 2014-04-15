@@ -109,7 +109,7 @@ class EC2Manager(object):
         vcl = self.vcl_template() % {"app_host": app_addr}
         handler = varnish.VarnishHandler("{0}:6082".format(instance_addr),
                                          secret=secret)
-        handler.vcl_inline("feaas", vcl)
+        handler.vcl_inline("feaas", vcl.encode("iso-8859-1", "ignore"))
         handler.vcl_use("feaas")
         handler.quit()
 
