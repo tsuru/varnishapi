@@ -217,7 +217,9 @@ chmod +x /etc/cron.hourly/dump_vcls
 
     def test_vcl_template(self):
         manager = ec2.EC2Manager(None)
-        self.assertEqual(ec2.VCL_TEMPLATE, manager.vcl_template())
+        with open(ec2.VCL_TEMPLATE_FILE) as f:
+            content = f.read().replace("\n", "").replace('"', r'\"')
+            self.assertEqual('"%s"' % content, manager.vcl_template())
 
     @patch("varnish.VarnishHandler")
     def test_write_vcl(self, VarnishHandler):
@@ -226,7 +228,7 @@ chmod +x /etc/cron.hourly/dump_vcls
         app_host, instance_ip = "yeah.cloud.tsuru.io", "10.2.1.2"
         manager = ec2.EC2Manager(None)
         manager.write_vcl(instance_ip, "abc-def", app_host)
-        vcl = manager.vcl_template().format(app_host)
+        vcl = manager.vcl_template() % {"app_host": app_host}
         VarnishHandler.assert_called_with("{0}:6082".format(instance_ip),
                                           secret="abc-def")
         varnish_handler.vcl_inline.assert_called_with("feaas", vcl)

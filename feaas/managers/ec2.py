@@ -10,11 +10,8 @@ import sys
 import varnish
 from feaas import storage
 
-VCL_TEMPLATE = (r""" "director app dns {{ {{ .backend = {{ .host = \"{0}\"; """
-                r""".port = \"80\"; }} }} .ttl = 5m; }} sub vcl_recv {{"""
-                r""" set req.http.X-Host = req.http.host; set req.http.Host = \"{0}\";"""
-                r""" if(req.url ~ \"/_varnish_healthcheck\") """
-                r"""{{ error 200 \"WORKING\"; set req.http.Connection = \"close\"; }} }}" """)
+VCL_TEMPLATE_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
+                                                 "misc", "default.vcl"))
 DUMP_VCL_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
                                              "misc", "dump_vcls.bash"))
 
@@ -108,7 +105,7 @@ class EC2Manager(object):
         return instance.dns_name, instance.secret
 
     def write_vcl(self, instance_addr, secret, app_addr):
-        vcl = self.vcl_template().format(app_addr)
+        vcl = self.vcl_template() % {"app_host": app_addr}
         handler = varnish.VarnishHandler("{0}:6082".format(instance_addr),
                                          secret=secret)
         handler.vcl_inline("feaas", vcl)
@@ -123,7 +120,11 @@ class EC2Manager(object):
         handler.quit()
 
     def vcl_template(self):
-        return VCL_TEMPLATE
+        with open(VCL_TEMPLATE_FILE) as f:
+            content = f.read()
+            content = content.replace("\n", "")
+            content = content.replace('"', r'\"')
+            return '"%s"' % content
 
     def remove_instance(self, name):
         instance = self.storage.retrieve(name=name)
