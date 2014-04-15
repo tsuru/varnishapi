@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+import codecs
 import os
 import urlparse
 import uuid
@@ -120,7 +121,7 @@ class EC2Manager(object):
         handler.quit()
 
     def vcl_template(self):
-        with open(VCL_TEMPLATE_FILE) as f:
+        with codecs.open(VCL_TEMPLATE_FILE, encoding="utf-8") as f:
             content = f.read()
             content = content.replace("\n", "")
             content = content.replace('"', r'\"')
