@@ -66,8 +66,11 @@ def unbind(name, host):
 def info(name):
     manager = get_manager()
     try:
-        return Response(response=json.dumps(manager.info(name)),
-                        status=200, mimetype="application/json")
+        info = manager.info(name)
+        if "secret" in info:
+            del info["secret"]
+        return Response(response=json.dumps(info), status=200,
+                        mimetype="application/json")
     except storage.InstanceNotFoundError:
         return "Instance not found", 404
 
