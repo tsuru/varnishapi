@@ -138,7 +138,8 @@ class EC2Manager(object):
                              " ".join([str(arg) for arg in e.args]))
 
     def info(self, name):
-        return self.storage.retrieve(name).to_dict()
+        instance = self.storage.retrieve(name)
+        return [{"label": "Address", "value": instance.dns_name}]
 
     def status(self, name):
         instance = self.storage.retrieve(name)
