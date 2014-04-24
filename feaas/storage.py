@@ -23,9 +23,6 @@ class Instance(object):
         self.id = id
         self.secret = secret
 
-    def to_json(self):
-        return json.dumps(self.to_dict())
-
     def to_dict(self):
         return {"name": self.name, "dns_name": self.dns_name,
                 "id": self.id, "secret": self.secret}

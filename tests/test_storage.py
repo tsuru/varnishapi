@@ -20,15 +20,6 @@ class InstanceTestCase(unittest.TestCase):
                     "name": "myinstance", "secret": None}
         self.assertEqual(expected, instance.to_dict())
 
-    def test_to_json(self):
-        instance = storage.Instance(name="myinstance",
-                                    dns_name="instance.cloud.tsuru.io",
-                                    id="i-0800")
-        json_str = instance.to_json()
-        expected = {"id": "i-0800", "dns_name": "instance.cloud.tsuru.io",
-                    "name": "myinstance", "secret": None}
-        self.assertEqual(expected, json.loads(json_str))
-
 
 class MongoDBStorageTestCase(unittest.TestCase):
 
