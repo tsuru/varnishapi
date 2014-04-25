@@ -48,7 +48,7 @@ class MongoDBStorageTestCase(unittest.TestCase):
     def test_store(self):
         instance = storage.Instance(id="i-0800", name="secret",
                                     dns_name="secret.pos.com")
-        self.storage.store(instance)
+        self.storage.store_instance(instance)
         instance = self.client.feaas_test.instances.find_one({"name": "secret"})
         expected = {"id": "i-0800", "name": "secret",
                     "dns_name": "secret.pos.com", "_id": instance["_id"],
@@ -58,17 +58,17 @@ class MongoDBStorageTestCase(unittest.TestCase):
     def test_retrieve(self):
         expected = storage.Instance(id="i-0800", name="what",
                                     dns_name="secret.pos.com")
-        self.storage.store(expected)
-        got = self.storage.retrieve("what")
+        self.storage.store_instance(expected)
+        got = self.storage.retrieve_instance("what")
         self.assertEqual(expected.to_dict(), got.to_dict())
 
     def test_retrieve_not_found(self):
         with self.assertRaises(storage.InstanceNotFoundError):
-            self.storage.retrieve("secret")
+            self.storage.retrieve_instance("secret")
 
     def test_remove(self):
         instance = storage.Instance(id="i-0800", name="years",
                                     dns_name="secret.pos.com")
-        self.storage.store(instance)
-        self.storage.remove(instance.name)
+        self.storage.store_instance(instance)
+        self.storage.remove_instance(instance.name)
         self.assertIsNone(self.client.feaas_test.instances.find_one({"name": instance.name}))

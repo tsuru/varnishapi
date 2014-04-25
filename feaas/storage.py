@@ -45,15 +45,15 @@ class MongoDBStorage(object):
         self.db = client[self.dbname]
         self.collection_name = "instances"
 
-    def store(self, instance):
+    def store_instance(self, instance):
         self.db[self.collection_name].insert(instance.to_dict())
 
-    def retrieve(self, name):
+    def retrieve_instance(self, name):
         instance = self.db[self.collection_name].find_one({"name": name})
         if not instance:
             raise InstanceNotFoundError()
         del instance["_id"]
         return Instance(**instance)
 
-    def remove(self, name):
+    def remove_instance(self, name):
         self.db[self.collection_name].remove({"name": name})
