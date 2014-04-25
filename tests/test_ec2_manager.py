@@ -191,28 +191,36 @@ chmod +x /etc/cron.hourly/dump_vcls
         msg = "[ERROR] Failed to terminate EC2 instance: Something went wrong"
         stderr_mock.write.assert_called_with(msg)
 
-    def test_bind_instance(self):
+    @patch("feaas.storage.Bind")
+    def test_bind_instance(self, Bind):
+        Bind.return_value = "abacaxi"
+        instance = api_storage.Instance(id="i-0800", secret="abc-123",
+                                        dns_name="10.1.1.2")
         storage = Mock()
-        storage.retrieve.return_value = api_storage.Instance(id="i-0800",
-                                                             secret="abc-123",
-                                                             dns_name="10.1.1.2")
+        storage.retrieve.return_value = instance
         manager = ec2.EC2Manager(storage)
         write_vcl = Mock()
         manager.write_vcl = write_vcl
         manager.bind("someapp", "myapp.cloud.tsuru.io")
         storage.retrieve.assert_called_with(name="someapp")
+        storage.store_bind.assert_called_with("abacaxi")
+        Bind.assert_called_with("myapp.cloud.tsuru.io", instance)
         write_vcl.assert_called_with("10.1.1.2", "abc-123", "myapp.cloud.tsuru.io")
 
-    def test_unbind_instance(self):
+    @patch("feaas.storage.Bind")
+    def test_unbind_instance(self, Bind):
+        Bind.return_value = "abacaxi"
+        instance = api_storage.Instance(id="i-0800", secret="abc-123",
+                                        dns_name="10.1.1.2")
         storage = Mock()
-        storage.retrieve.return_value = api_storage.Instance(id="i-0800",
-                                                             secret="abc-123",
-                                                             dns_name="10.1.1.2")
+        storage.retrieve.return_value = instance
         manager = ec2.EC2Manager(storage)
         remove_vcl = Mock()
         manager.remove_vcl = remove_vcl
         manager.unbind("someapp", "myapp.cloud.tsuru.io")
         storage.retrieve.assert_called_with(name="someapp")
+        storage.remove_bind.assert_called_with("abacaxi")
+        Bind.assert_called_with("myapp.cloud.tsuru.io", instance)
         remove_vcl.assert_called_with("10.1.1.2", "abc-123")
 
     def test_vcl_template(self):

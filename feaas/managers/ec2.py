@@ -94,16 +94,16 @@ class EC2Manager(object):
             return "\n".join(user_data_lines) + "\n"
 
     def bind(self, name, app_host):
-        instance_addr, secret = self.get_instance_addr(name)
-        self.write_vcl(instance_addr, secret, app_host)
+        instance = self.storage.retrieve(name=name)
+        self.write_vcl(instance.dns_name, instance.secret, app_host)
+        bind = storage.Bind(app_host, instance)
+        self.storage.store_bind(bind)
 
     def unbind(self, name, app_host):
-        instance_addr, secret = self.get_instance_addr(name)
-        self.remove_vcl(instance_addr, secret)
-
-    def get_instance_addr(self, name):
         instance = self.storage.retrieve(name=name)
-        return instance.dns_name, instance.secret
+        self.remove_vcl(instance.dns_name, instance.secret)
+        bind = storage.Bind(app_host, instance)
+        self.storage.remove_bind(bind)
 
     def write_vcl(self, instance_addr, secret, app_addr):
         vcl = self.vcl_template() % {"app_host": app_addr}
