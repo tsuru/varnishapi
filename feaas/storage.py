@@ -74,3 +74,7 @@ class MongoDBStorage(object):
                               instance=instance,
                               created_at=item["created_at"]))
         return binds
+
+    def remove_bind(self, bind):
+        self.db.binds.remove({"app_host": bind.app_host,
+                              "instance_name": bind.instance.name})
