@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+import datetime
+
 import pymongo
 
 
@@ -28,12 +30,14 @@ class Instance(object):
 
 class Bind(object):
 
-    def __init__(self, app_host, instance):
+    def __init__(self, app_host, instance, created_at=None):
         self.app_host = app_host
         self.instance = instance
+        self.created_at = created_at or datetime.datetime.utcnow()
 
     def to_dict(self):
-        return {"app_host": self.app_host, "instance_name": self.instance.name}
+        return {"app_host": self.app_host, "instance_name": self.instance.name,
+                "created_at": self.created_at}
 
 
 class MongoDBStorage(object):
@@ -57,3 +61,16 @@ class MongoDBStorage(object):
 
     def remove_instance(self, name):
         self.db[self.collection_name].remove({"name": name})
+
+    def store_bind(self, bind):
+        self.db.binds.insert(bind.to_dict())
+
+    def retrieve_binds(self, instance_name):
+        binds = []
+        items = self.db.binds.find({"instance_name": instance_name})
+        for item in items:
+            instance = Instance(name=item["instance_name"])
+            binds.append(Bind(app_host=item["app_host"],
+                              instance=instance,
+                              created_at=item["created_at"]))
+        return binds
