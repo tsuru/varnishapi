@@ -26,6 +26,16 @@ class Instance(object):
                 "id": self.id, "secret": self.secret}
 
 
+class Bind(object):
+
+    def __init__(self, app_host, instance):
+        self.app_host = app_host
+        self.instance = instance
+
+    def to_dict(self):
+        return {"app_host": self.app_host, "instance_name": self.instance.name}
+
+
 class MongoDBStorage(object):
 
     def __init__(self, mongo_uri=None, dbname=None):

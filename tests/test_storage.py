@@ -20,6 +20,18 @@ class InstanceTestCase(unittest.TestCase):
         self.assertEqual(expected, instance.to_dict())
 
 
+class BindTestCase(unittest.TestCase):
+
+    def test_to_dict(self):
+        instance = storage.Instance(name="myinstance",
+                                    dns_name="instance.cloud.tsuru.io",
+                                    id="i-0800")
+        bind = storage.Bind("wat.g1.cloud.tsuru.io", instance)
+        expected = {"app_host": "wat.g1.cloud.tsuru.io",
+                    "instance_name": "myinstance"}
+        self.assertEqual(expected, bind.to_dict())
+
+
 class MongoDBStorageTestCase(unittest.TestCase):
 
     @classmethod
