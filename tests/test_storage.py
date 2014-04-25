@@ -72,19 +72,3 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.storage.store(instance)
         self.storage.remove(instance.name)
         self.assertIsNone(self.client.feaas_test.instances.find_one({"name": instance.name}))
-
-    def test_retrieve_public_key(self):
-        key = {"public_body": "my super key", "private_body": "secret part, do not touch"}
-        self.client.feaas_test.keys.insert(key)
-        self.addCleanup(self.client.feaas_test.keys.remove,
-                        {"public_body": "my super key"})
-        key = self.storage.retrieve_public_key()
-        self.assertEqual("my super key", key)
-
-    def test_retrieve_private_key(self):
-        key = {"public_body": "my super key", "private_body": "secret part, do not touch"}
-        self.client.feaas_test.keys.insert(key)
-        self.addCleanup(self.client.feaas_test.keys.remove,
-                        {"public_body": "my super key"})
-        key = self.storage.retrieve_private_key()
-        self.assertEqual("secret part, do not touch", key)
