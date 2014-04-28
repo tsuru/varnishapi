@@ -17,7 +17,8 @@ class InstanceTestCase(unittest.TestCase):
                                     dns_name="instance.cloud.tsuru.io",
                                     id="i-0800")
         expected = {"id": "i-0800", "dns_name": "instance.cloud.tsuru.io",
-                    "name": "myinstance", "secret": None}
+                    "name": "myinstance", "secret": None,
+                    "units": instance.units}
         self.assertEqual(expected, instance.to_dict())
 
 
@@ -30,8 +31,7 @@ class BindTestCase(unittest.TestCase):
         bind = storage.Bind("wat.g1.cloud.tsuru.io", instance)
         expected = {"app_host": "wat.g1.cloud.tsuru.io",
                     "instance_name": "myinstance",
-                    "created_at": bind.created_at,
-                    "units": bind.units}
+                    "created_at": bind.created_at}
         self.assertEqual(expected, bind.to_dict())
 
 
@@ -56,7 +56,7 @@ class MongoDBStorageTestCase(unittest.TestCase):
         instance = self.client.feaas_test.instances.find_one({"name": "secret"})
         expected = {"id": "i-0800", "name": "secret",
                     "dns_name": "secret.pos.com", "_id": instance["_id"],
-                    "secret": None}
+                    "secret": None, "units": 1}
         self.assertEqual(expected, instance)
 
     def test_retrieve_instance(self):

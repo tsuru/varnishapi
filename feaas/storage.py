@@ -17,28 +17,29 @@ class InstanceAlreadyExistsError(Exception):
 
 class Instance(object):
 
-    def __init__(self, name=None, dns_name=None, id=None, secret=None):
+    def __init__(self, name=None, dns_name=None, id=None, secret=None, units=1):
         self.name = name
         self.dns_name = dns_name
         self.id = id
         self.secret = secret
+        self.units = units
 
     def to_dict(self):
         return {"name": self.name, "dns_name": self.dns_name,
-                "id": self.id, "secret": self.secret}
+                "id": self.id, "secret": self.secret,
+                "units": self.units}
 
 
 class Bind(object):
 
-    def __init__(self, app_host, instance, units=1, created_at=None):
+    def __init__(self, app_host, instance, created_at=None):
         self.app_host = app_host
         self.instance = instance
-        self.units = units
         self.created_at = created_at or datetime.datetime.utcnow()
 
     def to_dict(self):
         return {"app_host": self.app_host, "instance_name": self.instance.name,
-                "created_at": self.created_at, "units": self.units}
+                "created_at": self.created_at}
 
 
 class MongoDBStorage(object):
