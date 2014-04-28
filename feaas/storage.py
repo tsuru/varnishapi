@@ -17,17 +17,35 @@ class InstanceAlreadyExistsError(Exception):
 
 class Instance(object):
 
-    def __init__(self, name=None, dns_name=None, id=None, secret=None, units=1):
+    def __init__(self, name=None, dns_name=None, id=None, secret=None, units=None):
         self.name = name
         self.dns_name = dns_name
         self.id = id
         self.secret = secret
-        self.units = units
+        self.units = units or []
 
     def to_dict(self):
         return {"name": self.name, "dns_name": self.dns_name,
                 "id": self.id, "secret": self.secret,
-                "units": self.units}
+                "units": [u.to_dict() for u in self.units]}
+
+    def add_unit(self, unit):
+        self.units.append(unit)
+
+    def remove_unit(self, unit):
+        self.units.remove(unit)
+
+
+class Unit(object):
+
+    def __init__(self, id=None, dns_name=None, secret=None):
+        self.id = id
+        self.dns_name = dns_name
+        self.secret = secret
+
+    def to_dict(self):
+        return {"id": self.id, "dns_name": self.dns_name,
+                "secret": self.secret}
 
 
 class Bind(object):
@@ -59,6 +77,7 @@ class MongoDBStorage(object):
         if not instance:
             raise InstanceNotFoundError()
         del instance["_id"]
+        instance["units"] = [Unit(**u) for u in instance["units"]]
         return Instance(**instance)
 
     def remove_instance(self, name):

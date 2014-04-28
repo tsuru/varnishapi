@@ -12,14 +12,50 @@ from feaas import storage
 
 class InstanceTestCase(unittest.TestCase):
 
+    def test_init_units(self):
+        instance = storage.Instance()
+        self.assertEqual([], instance.units)
+        units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800")]
+        instance = storage.Instance(units=units)
+        self.assertEqual(units, instance.units)
+
     def test_to_dict(self):
+        units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800")]
         instance = storage.Instance(name="myinstance",
                                     dns_name="instance.cloud.tsuru.io",
-                                    id="i-0800")
+                                    id="i-0800", units=units)
         expected = {"id": "i-0800", "dns_name": "instance.cloud.tsuru.io",
                     "name": "myinstance", "secret": None,
-                    "units": instance.units}
+                    "units": [u.to_dict() for u in instance.units]}
         self.assertEqual(expected, instance.to_dict())
+
+    def test_add_unit(self):
+        unit1 = storage.Unit(dns_name="instance1.cloud.tsuru.io", id="i-0800")
+        unit2 = storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801")
+        instance = storage.Instance()
+        instance.add_unit(unit1)
+        instance.add_unit(unit2)
+        self.assertEqual([unit1, unit2], instance.units)
+
+    def test_remove_unit(self):
+        unit1 = storage.Unit(dns_name="instance1.cloud.tsuru.io", id="i-0800")
+        unit2 = storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801")
+        instance = storage.Instance()
+        instance.add_unit(unit1)
+        instance.add_unit(unit2)
+        self.assertEqual([unit1, unit2], instance.units)
+        instance.remove_unit(unit1)
+        self.assertEqual([unit2], instance.units)
+
+
+class UnitTestCase(unittest.TestCase):
+
+    def test_to_dict(self):
+        unit = storage.Unit(id="i-0800", dns_name="instance.cloud.tsuru.io",
+                            secret="abc123")
+        expected = {"id": "i-0800", "dns_name": "instance.cloud.tsuru.io",
+                    "secret": "abc123"}
+        self.assertEqual(expected, unit.to_dict())
 
 
 class BindTestCase(unittest.TestCase):
@@ -56,12 +92,27 @@ class MongoDBStorageTestCase(unittest.TestCase):
         instance = self.client.feaas_test.instances.find_one({"name": "secret"})
         expected = {"id": "i-0800", "name": "secret",
                     "dns_name": "secret.pos.com", "_id": instance["_id"],
-                    "secret": None, "units": 1}
+                    "secret": None, "units": []}
+        self.assertEqual(expected, instance)
+
+    def test_store_instance_with_units(self):
+        units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800")]
+        instance = storage.Instance(id="i-0800", name="secret",
+                                    dns_name="secret.pos.com",
+                                    units=units)
+        self.storage.store_instance(instance)
+        self.addCleanup(self.client.feaas_test.instances.remove, {"name": "secret"})
+        instance = self.client.feaas_test.instances.find_one({"name": "secret"})
+        expected = {"id": "i-0800", "name": "secret",
+                    "dns_name": "secret.pos.com", "_id": instance["_id"],
+                    "secret": None, "units": [u.to_dict() for u in units]}
         self.assertEqual(expected, instance)
 
     def test_retrieve_instance(self):
+        units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800")]
         expected = storage.Instance(id="i-0800", name="what",
-                                    dns_name="secret.pos.com")
+                                    dns_name="secret.pos.com",
+                                    units=units)
         self.storage.store_instance(expected)
         got = self.storage.retrieve_instance("what")
         self.assertEqual(expected.to_dict(), got.to_dict())
