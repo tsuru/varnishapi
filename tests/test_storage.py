@@ -102,6 +102,20 @@ class MongoDBStorageTestCase(unittest.TestCase):
                     "units": [u.to_dict() for u in units]}
         self.assertEqual(expected, instance)
 
+    def test_store_instance_update(self):
+        units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800")]
+        instance = storage.Instance(name="secret", units=units)
+        self.storage.store_instance(instance)
+        self.addCleanup(self.client.feaas_test.instances.remove, {"name": "secret"})
+        unit = storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801")
+        units.append(unit)
+        instance.add_unit(unit)
+        self.storage.store_instance(instance)
+        instance = self.client.feaas_test.instances.find_one({"name": "secret"})
+        expected = {"name": "secret", "_id": instance["_id"],
+                    "units": [u.to_dict() for u in units]}
+        self.assertEqual(expected, instance)
+
     def test_retrieve_instance(self):
         units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800")]
         expected = storage.Instance(name="what", units=units)

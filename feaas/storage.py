@@ -66,7 +66,8 @@ class MongoDBStorage(object):
         self.collection_name = "instances"
 
     def store_instance(self, instance):
-        self.db[self.collection_name].insert(instance.to_dict())
+        self.db[self.collection_name].update({"name": instance.name}, instance.to_dict(),
+                                             upsert=True)
 
     def retrieve_instance(self, name):
         instance = self.db[self.collection_name].find_one({"name": name})
