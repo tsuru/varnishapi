@@ -15,17 +15,16 @@ class InstanceTestCase(unittest.TestCase):
     def test_init_units(self):
         instance = storage.Instance()
         self.assertEqual([], instance.units)
-        units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800")]
+        units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800",
+                              secret="abc123")]
         instance = storage.Instance(units=units)
         self.assertEqual(units, instance.units)
 
     def test_to_dict(self):
-        units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800")]
-        instance = storage.Instance(name="myinstance",
-                                    dns_name="instance.cloud.tsuru.io",
-                                    id="i-0800", units=units)
-        expected = {"id": "i-0800", "dns_name": "instance.cloud.tsuru.io",
-                    "name": "myinstance", "secret": None,
+        units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800",
+                              secret="abc123")]
+        instance = storage.Instance(name="myinstance", units=units)
+        expected = {"name": "myinstance",
                     "units": [u.to_dict() for u in instance.units]}
         self.assertEqual(expected, instance.to_dict())
 
@@ -61,9 +60,7 @@ class UnitTestCase(unittest.TestCase):
 class BindTestCase(unittest.TestCase):
 
     def test_to_dict(self):
-        instance = storage.Instance(name="myinstance",
-                                    dns_name="instance.cloud.tsuru.io",
-                                    id="i-0800")
+        instance = storage.Instance(name="myinstance")
         bind = storage.Bind("wat.g1.cloud.tsuru.io", instance)
         expected = {"app_host": "wat.g1.cloud.tsuru.io",
                     "instance_name": "myinstance",
@@ -85,34 +82,29 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.storage = storage.MongoDBStorage(dbname="feaas_test")
 
     def test_store_instance(self):
-        instance = storage.Instance(id="i-0800", name="secret",
-                                    dns_name="secret.pos.com")
+        instance = storage.Instance(name="secret",
+                                    units=[storage.Unit(id="i-0800",
+                                                        dns_name="secret.pos.com")])
         self.storage.store_instance(instance)
         self.addCleanup(self.client.feaas_test.instances.remove, {"name": "secret"})
         instance = self.client.feaas_test.instances.find_one({"name": "secret"})
-        expected = {"id": "i-0800", "name": "secret",
-                    "dns_name": "secret.pos.com", "_id": instance["_id"],
-                    "secret": None, "units": []}
+        expected = {"name": "secret", "_id": instance["_id"],
+                    "units": [{"id": "i-0800", "secret": None, "dns_name": "secret.pos.com"}]}
         self.assertEqual(expected, instance)
 
     def test_store_instance_with_units(self):
         units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800")]
-        instance = storage.Instance(id="i-0800", name="secret",
-                                    dns_name="secret.pos.com",
-                                    units=units)
+        instance = storage.Instance(name="secret", units=units)
         self.storage.store_instance(instance)
         self.addCleanup(self.client.feaas_test.instances.remove, {"name": "secret"})
         instance = self.client.feaas_test.instances.find_one({"name": "secret"})
-        expected = {"id": "i-0800", "name": "secret",
-                    "dns_name": "secret.pos.com", "_id": instance["_id"],
-                    "secret": None, "units": [u.to_dict() for u in units]}
+        expected = {"name": "secret", "_id": instance["_id"],
+                    "units": [u.to_dict() for u in units]}
         self.assertEqual(expected, instance)
 
     def test_retrieve_instance(self):
         units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800")]
-        expected = storage.Instance(id="i-0800", name="what",
-                                    dns_name="secret.pos.com",
-                                    units=units)
+        expected = storage.Instance(name="what", units=units)
         self.storage.store_instance(expected)
         got = self.storage.retrieve_instance("what")
         self.assertEqual(expected.to_dict(), got.to_dict())
@@ -122,16 +114,14 @@ class MongoDBStorageTestCase(unittest.TestCase):
             self.storage.retrieve_instance("secret")
 
     def test_remove_instance(self):
-        instance = storage.Instance(id="i-0800", name="years",
-                                    dns_name="secret.pos.com")
+        instance = storage.Instance(name="years")
         self.storage.store_instance(instance)
         self.storage.remove_instance(instance.name)
         self.assertIsNone(self.client.feaas_test.instances.find_one({"name": instance.name}))
 
     @freezegun.freeze_time("2014-02-16 12:00:01")
     def test_store_bind(self):
-        instance = storage.Instance(id="i-0800", name="years",
-                                    dns_name="secret.pos.com")
+        instance = storage.Instance(name="years")
         bind = storage.Bind(app_host="something.where.com", instance=instance)
         self.storage.store_bind(bind)
         self.addCleanup(self.client.feaas_test.binds.remove,
@@ -144,8 +134,7 @@ class MongoDBStorageTestCase(unittest.TestCase):
 
     @freezegun.freeze_time("2014-02-16 12:00:01")
     def test_retrieve_binds(self):
-        instance = storage.Instance(id="i-0800", name="years",
-                                    dns_name="secret.pos.com")
+        instance = storage.Instance(name="years")
         bind1 = storage.Bind(app_host="something.where.com", instance=instance)
         self.storage.store_bind(bind1)
         bind2 = storage.Bind(app_host="belong.where.com", instance=instance)
@@ -157,8 +146,7 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.assertEqual([bind1.to_dict(), bind2.to_dict()], binds)
 
     def test_remove_bind(self):
-        instance = storage.Instance(id="i-0800", name="years",
-                                    dns_name="secret.pos.com")
+        instance = storage.Instance(name="years")
         bind = storage.Bind(app_host="something.where.com", instance=instance)
         self.storage.store_bind(bind)
         self.addCleanup(self.client.feaas_test.binds.remove,

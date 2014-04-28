@@ -61,9 +61,8 @@ class EC2Manager(object):
                                                         subnet_id=subnet_id,
                                                         user_data=self._user_data(secret))
             for instance in reservation.instances:
-                self.storage.store(storage.Instance(id=instance.id,
-                                                    dns_name=instance.dns_name,
-                                                    name=name, secret=secret))
+                unit = storage.Unit(id=instance.id, dns_name=instance.dns_name, secret=secret)
+                self.storage.store_instance(storage.Instance(name, units=[unit]))
         except Exception as e:
             sys.stderr.write("[ERROR] Failed to create EC2 instance: %s" %
                              " ".join(e.args))
@@ -71,7 +70,7 @@ class EC2Manager(object):
 
     def _check_duplicate(self, name):
         try:
-            self.storage.retrieve(name)
+            self.storage.retrieve_instance(name)
             raise storage.InstanceAlreadyExistsError()
         except storage.InstanceNotFoundError:
             pass
@@ -94,14 +93,16 @@ class EC2Manager(object):
             return "\n".join(user_data_lines) + "\n"
 
     def bind(self, name, app_host):
-        instance = self.storage.retrieve(name=name)
-        self.write_vcl(instance.dns_name, instance.secret, app_host)
+        instance = self.storage.retrieve_instance(name=name)
+        for unit in instance.units:
+            self.write_vcl(unit.dns_name, unit.secret, app_host)
         bind = storage.Bind(app_host, instance)
         self.storage.store_bind(bind)
 
     def unbind(self, name, app_host):
-        instance = self.storage.retrieve(name=name)
-        self.remove_vcl(instance.dns_name, instance.secret)
+        instance = self.storage.retrieve_instance(name=name)
+        for unit in instance.units:
+            self.remove_vcl(unit.dns_name, unit.secret)
         bind = storage.Bind(app_host, instance)
         self.storage.remove_bind(bind)
 
@@ -129,21 +130,26 @@ class EC2Manager(object):
             return '"%s"' % content.strip()
 
     def remove_instance(self, name):
-        instance = self.storage.retrieve(name=name)
+        instance = self.storage.retrieve_instance(name=name)
+        for unit in instance.units:
+            self._terminate_unit(unit)
+        self.storage.remove_instance(name=name)
+
+    def _terminate_unit(self, unit):
         try:
-            self.connection.terminate_instances(instance_ids=[instance.id])
-            self.storage.remove(name=name)
+            self.connection.terminate_instances(instance_ids=[unit.id])
         except Exception as e:
             sys.stderr.write("[ERROR] Failed to terminate EC2 instance: %s" %
                              " ".join([str(arg) for arg in e.args]))
 
     def info(self, name):
-        instance = self.storage.retrieve(name)
-        return [{"label": "Address", "value": instance.dns_name}]
+        instance = self.storage.retrieve_instance(name)
+        return [{"label": "Address",
+                 "value": instance.units[0].dns_name}]
 
     def status(self, name):
-        instance = self.storage.retrieve(name)
-        reservations = self.connection.get_all_instances(instance_ids=[instance.id])
+        instance = self.storage.retrieve_instance(name)
+        reservations = self.connection.get_all_instances(instance_ids=[instance.units[0].id])
         if len(reservations) < 1 or len(reservations[0].instances) < 1:
             raise storage.InstanceNotFoundError()
         return reservations[0].instances[0].state

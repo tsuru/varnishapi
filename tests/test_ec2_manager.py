@@ -109,18 +109,18 @@ class EC2ManagerTestCase(unittest.TestCase):
             instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
         )
         storage = Mock()
-        storage.retrieve.side_effect = api_storage.InstanceNotFoundError()
+        storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         manager.add_instance("someapp")
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
                                                    user_data=None)
-        storage.store.assert_called_once()
+        storage.store_instance.assert_called_once()
 
     def test_add_duplicate_instance(self):
         storage = Mock()
-        storage.retrieve.return_value = "instance"
+        storage.retrieve_instance.return_value = "instance"
         manager = ec2.EC2Manager(storage)
         with self.assertRaises(api_storage.InstanceAlreadyExistsError):
             manager.add_instance("pull")
@@ -130,7 +130,7 @@ class EC2ManagerTestCase(unittest.TestCase):
         conn = Mock()
         conn.run_instances.side_effect = ValueError("Something went wrong")
         storage = Mock()
-        storage.retrieve.side_effect = api_storage.InstanceNotFoundError()
+        storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         manager.add_instance("someapp")
@@ -150,7 +150,7 @@ class EC2ManagerTestCase(unittest.TestCase):
             instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
         )
         storage = Mock()
-        storage.retrieve.side_effect = api_storage.InstanceNotFoundError()
+        storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         manager.add_instance("someapp")
@@ -168,24 +168,30 @@ chmod +x /etc/cron.hourly/dump_vcls
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
                                                    user_data=user_data)
-        storage.store.assert_called_once()
+        storage.store_instance.assert_called_once()
 
     def test_remove_instance(self):
         conn = Mock()
         storage = Mock()
-        storage.retrieve.return_value = api_storage.Instance(id="i-0800")
+        unit = api_storage.Unit(id="i-0800")
+        storage.retrieve_instance.return_value = api_storage.Instance(name="secret",
+                                                                      units=[unit])
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         manager.remove_instance("someapp")
         conn.terminate_instances.assert_called_with(instance_ids=["i-0800"])
-        storage.retrieve.assert_called_with(name="someapp")
-        storage.remove.assert_called_with(name="someapp")
+        storage.retrieve_instance.assert_called_with(name="someapp")
+        storage.remove_instance.assert_called_with(name="someapp")
 
     @patch("sys.stderr")
     def test_remove_instance_ec2_failure(self, stderr_mock):
         conn = Mock()
         conn.terminate_instances.side_effect = ValueError("Something went wrong")
-        manager = ec2.EC2Manager(Mock())
+        unit = api_storage.Unit(id="i-0800")
+        storage = Mock()
+        storage.retrieve_instance.return_value = api_storage.Instance(name="secret",
+                                                                      units=[unit])
+        manager = ec2.EC2Manager(storage)
         manager._connection = conn
         manager.remove_instance("someapp")
         msg = "[ERROR] Failed to terminate EC2 instance: Something went wrong"
@@ -194,15 +200,17 @@ chmod +x /etc/cron.hourly/dump_vcls
     @patch("feaas.storage.Bind")
     def test_bind_instance(self, Bind):
         Bind.return_value = "abacaxi"
-        instance = api_storage.Instance(id="i-0800", secret="abc-123",
-                                        dns_name="10.1.1.2")
+        instance = api_storage.Instance(name="myinstance",
+                                        units=[api_storage.Unit(secret="abc-123",
+                                                                dns_name="10.1.1.2",
+                                                                id="i-0800")])
         storage = Mock()
-        storage.retrieve.return_value = instance
+        storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         write_vcl = Mock()
         manager.write_vcl = write_vcl
         manager.bind("someapp", "myapp.cloud.tsuru.io")
-        storage.retrieve.assert_called_with(name="someapp")
+        storage.retrieve_instance.assert_called_with(name="someapp")
         storage.store_bind.assert_called_with("abacaxi")
         Bind.assert_called_with("myapp.cloud.tsuru.io", instance)
         write_vcl.assert_called_with("10.1.1.2", "abc-123", "myapp.cloud.tsuru.io")
@@ -210,15 +218,17 @@ chmod +x /etc/cron.hourly/dump_vcls
     @patch("feaas.storage.Bind")
     def test_unbind_instance(self, Bind):
         Bind.return_value = "abacaxi"
-        instance = api_storage.Instance(id="i-0800", secret="abc-123",
-                                        dns_name="10.1.1.2")
+        instance = api_storage.Instance(name="myinstance",
+                                        units=[api_storage.Unit(id="i-0800",
+                                                                secret="abc-123",
+                                                                dns_name="10.1.1.2")])
         storage = Mock()
-        storage.retrieve.return_value = instance
+        storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         remove_vcl = Mock()
         manager.remove_vcl = remove_vcl
         manager.unbind("someapp", "myapp.cloud.tsuru.io")
-        storage.retrieve.assert_called_with(name="someapp")
+        storage.retrieve_instance.assert_called_with(name="someapp")
         storage.remove_bind.assert_called_with("abacaxi")
         Bind.assert_called_with("myapp.cloud.tsuru.io", instance)
         remove_vcl.assert_called_with("10.1.1.2", "abc-123")
@@ -258,17 +268,32 @@ chmod +x /etc/cron.hourly/dump_vcls
         varnish_handler.quit.assert_called()
 
     def test_info(self):
-        instance = api_storage.Instance("secret", "secret.cloud.tsuru.io", "i-0800")
+        instance = api_storage.Instance(name="secret",
+                                        units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
+                                                                id="i-0800")])
         storage = Mock()
-        storage.retrieve.return_value = instance
+        storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         expected = [{"label": "Address", "value": "secret.cloud.tsuru.io"}]
         self.assertEqual(expected, manager.info("secret"))
-        storage.retrieve.assert_called_with("secret")
+        storage.retrieve_instance.assert_called_with("secret")
+
+    def test_info_multiple_units(self):
+        units = [api_storage.Unit(dns_name="secret.cloud.tsuru.io",
+                                  id="i-0800"),
+                 api_storage.Unit(dns_name="not-secret.cloud.tsuru.io",
+                                  id="i-0800")]
+        instance = api_storage.Instance(name="secret", units=units)
+        storage = Mock()
+        storage.retrieve_instance.return_value = instance
+        manager = ec2.EC2Manager(storage)
+        expected = [{"label": "Address", "value": "secret.cloud.tsuru.io"}]
+        self.assertEqual(expected, manager.info("secret"))
+        storage.retrieve_instance.assert_called_with("secret")
 
     def test_info_instance_not_found(self):
         storage = Mock()
-        storage.retrieve.side_effect = api_storage.InstanceNotFoundError()
+        storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         with self.assertRaises(api_storage.InstanceNotFoundError):
             manager.info("secret")
@@ -279,9 +304,11 @@ chmod +x /etc/cron.hourly/dump_vcls
             instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1",
                         "state": "running", "state_code": 16}],
         )]
-        instance = api_storage.Instance("secret", "secret.cloud.tsuru.io", "i-0800")
+        instance = api_storage.Instance(name="secret",
+                                        units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
+                                                                id="i-0800")])
         storage = Mock()
-        storage.retrieve.return_value = instance
+        storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         status = manager.status("secret")
@@ -293,9 +320,11 @@ chmod +x /etc/cron.hourly/dump_vcls
             instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1",
                         "state": "pending", "state_code": 0}],
         )]
-        instance = api_storage.Instance("secret", "secret.cloud.tsuru.io", "i-0800")
+        instance = api_storage.Instance(name="secret",
+                                        units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
+                                                                id="i-0800")])
         storage = Mock()
-        storage.retrieve.return_value = instance
+        storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         status = manager.status("secret")
@@ -303,7 +332,7 @@ chmod +x /etc/cron.hourly/dump_vcls
 
     def test_status_instance_not_found_in_storage(self):
         storage = Mock()
-        storage.retrieve.side_effect = api_storage.InstanceNotFoundError()
+        storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         with self.assertRaises(api_storage.InstanceNotFoundError):
             manager.status("secret")
@@ -311,9 +340,11 @@ chmod +x /etc/cron.hourly/dump_vcls
     def test_status_instance_not_found_in_ec2_reservation(self):
         conn = Mock()
         conn.get_all_instances.return_value = []
-        instance = api_storage.Instance("secret", "secret.cloud.tsuru.io", "i-0800")
+        instance = api_storage.Instance(name="secret",
+                                        units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
+                                                                id="i-0800")])
         storage = Mock()
-        storage.retrieve.return_value = instance
+        storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         with self.assertRaises(api_storage.InstanceNotFoundError):
@@ -324,9 +355,11 @@ chmod +x /etc/cron.hourly/dump_vcls
         conn.get_all_instances.return_value = [self.get_fake_reservation(
             instances=[],
         )]
-        instance = api_storage.Instance("secret", "secret.cloud.tsuru.io", "i-0800")
+        instance = api_storage.Instance(name="secret",
+                                        units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
+                                                                id="i-0800")])
         storage = Mock()
-        storage.retrieve.return_value = instance
+        storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         with self.assertRaises(api_storage.InstanceNotFoundError):

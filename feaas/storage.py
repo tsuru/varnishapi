@@ -17,16 +17,12 @@ class InstanceAlreadyExistsError(Exception):
 
 class Instance(object):
 
-    def __init__(self, name=None, dns_name=None, id=None, secret=None, units=None):
+    def __init__(self, name=None, units=None):
         self.name = name
-        self.dns_name = dns_name
-        self.id = id
-        self.secret = secret
         self.units = units or []
 
     def to_dict(self):
-        return {"name": self.name, "dns_name": self.dns_name,
-                "id": self.id, "secret": self.secret,
+        return {"name": self.name,
                 "units": [u.to_dict() for u in self.units]}
 
     def add_unit(self, unit):
