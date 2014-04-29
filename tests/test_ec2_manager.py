@@ -5,7 +5,7 @@
 import os
 import unittest
 
-from mock import Mock, patch
+import mock
 
 from feaas import storage as api_storage
 from feaas.managers import ec2
@@ -23,10 +23,10 @@ class EC2ManagerTestCase(unittest.TestCase):
     def setUp(self):
         os.environ["EC2_ENDPOINT"] = "http://amazonaws.com"
 
-    @patch("boto.ec2.EC2Connection")
-    @patch("boto.ec2.RegionInfo")
+    @mock.patch("boto.ec2.EC2Connection")
+    @mock.patch("boto.ec2.RegionInfo")
     def test_connection_http(self, region_mock, ec2_mock):
-        m = Mock()
+        m = mock.Mock()
         region_mock.return_value = m
         os.environ["EC2_ENDPOINT"] = "http://amazonaws.com"
         ec2_mock.return_value = "connection to ec2"
@@ -39,10 +39,10 @@ class EC2ManagerTestCase(unittest.TestCase):
                                     region=m)
         region_mock.assert_called_with(name="custom", endpoint="amazonaws.com")
 
-    @patch("boto.ec2.EC2Connection")
-    @patch("boto.ec2.RegionInfo")
+    @mock.patch("boto.ec2.EC2Connection")
+    @mock.patch("boto.ec2.RegionInfo")
     def test_connection_https(self, region_mock, ec2_mock):
-        m = Mock()
+        m = mock.Mock()
         region_mock.return_value = m
         os.environ["EC2_ENDPOINT"] = "https://amazonaws.com"
         ec2_mock.return_value = "connection to ec2"
@@ -55,10 +55,10 @@ class EC2ManagerTestCase(unittest.TestCase):
                                     region=m)
         region_mock.assert_called_with(name="custom", endpoint="amazonaws.com")
 
-    @patch("boto.ec2.EC2Connection")
-    @patch("boto.ec2.RegionInfo")
+    @mock.patch("boto.ec2.EC2Connection")
+    @mock.patch("boto.ec2.RegionInfo")
     def test_ec2_connection_http_custom_port(self, region_mock, ec2_mock):
-        m = Mock()
+        m = mock.Mock()
         region_mock.return_value = m
         os.environ["EC2_ENDPOINT"] = "http://amazonaws.com:8080"
         ec2_mock.return_value = "connection to ec2"
@@ -71,10 +71,10 @@ class EC2ManagerTestCase(unittest.TestCase):
                                     region=m)
         region_mock.assert_called_with(name="custom", endpoint="amazonaws.com")
 
-    @patch("boto.ec2.EC2Connection")
-    @patch("boto.ec2.RegionInfo")
+    @mock.patch("boto.ec2.EC2Connection")
+    @mock.patch("boto.ec2.RegionInfo")
     def test_ec2_connection_https_custom_port(self, region_mock, ec2_mock):
-        m = Mock()
+        m = mock.Mock()
         region_mock.return_value = m
         os.environ["EC2_ENDPOINT"] = "https://amazonaws.com:8080"
         ec2_mock.return_value = "connection to ec2"
@@ -87,10 +87,10 @@ class EC2ManagerTestCase(unittest.TestCase):
                                     region=m)
         region_mock.assert_called_with(name="custom", endpoint="amazonaws.com")
 
-    @patch("boto.ec2.EC2Connection")
-    @patch("boto.ec2.RegionInfo")
+    @mock.patch("boto.ec2.EC2Connection")
+    @mock.patch("boto.ec2.RegionInfo")
     def test_ec2_connection_custom_path(self, region_mock, ec2_mock):
-        m = Mock()
+        m = mock.Mock()
         region_mock.return_value = m
         os.environ["EC2_ENDPOINT"] = "https://amazonaws.com:8080/something"
         ec2_mock.return_value = "connection to ec2"
@@ -104,32 +104,32 @@ class EC2ManagerTestCase(unittest.TestCase):
         region_mock.assert_called_with(name="custom", endpoint="amazonaws.com")
 
     def test_add_instance(self):
-        conn = Mock()
+        conn = mock.Mock()
         conn.run_instances.return_value = self.get_fake_reservation(
             instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
         )
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
-        manager.add_instance("someapp")
+        instance = manager.add_instance("someapp")
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
                                                    user_data=None)
-        storage.store_instance.assert_called_once()
+        storage.store_instance.assert_called_with(instance)
 
     def test_add_duplicate_instance(self):
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.return_value = "instance"
         manager = ec2.EC2Manager(storage)
         with self.assertRaises(api_storage.InstanceAlreadyExistsError):
             manager.add_instance("pull")
 
-    @patch("sys.stderr")
+    @mock.patch("sys.stderr")
     def test_add_instance_ec2_failure(self, stderr_mock):
-        conn = Mock()
+        conn = mock.Mock()
         conn.run_instances.side_effect = ValueError("Something went wrong")
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
@@ -137,7 +137,7 @@ class EC2ManagerTestCase(unittest.TestCase):
         msg = "[ERROR] Failed to create EC2 instance: Something went wrong"
         stderr_mock.write.assert_called_with(msg)
 
-    @patch("uuid.uuid4")
+    @mock.patch("uuid.uuid4")
     def test_add_instance_packages(self, uuid4):
         uuid4.return_value = u"abacaxi"
         os.environ["API_PACKAGES"] = "varnish vim-nox"
@@ -145,11 +145,11 @@ class EC2ManagerTestCase(unittest.TestCase):
         def recover():
             del os.environ["API_PACKAGES"]
         self.addCleanup(recover)
-        conn = Mock()
+        conn = mock.Mock()
         conn.run_instances.return_value = self.get_fake_reservation(
             instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
         )
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
@@ -171,8 +171,8 @@ chmod +x /etc/cron.hourly/dump_vcls
         storage.store_instance.assert_called_once()
 
     def test_remove_instance(self):
-        conn = Mock()
-        storage = Mock()
+        conn = mock.Mock()
+        storage = mock.Mock()
         unit = api_storage.Unit(id="i-0800")
         storage.retrieve_instance.return_value = api_storage.Instance(name="secret",
                                                                       units=[unit])
@@ -183,12 +183,12 @@ chmod +x /etc/cron.hourly/dump_vcls
         storage.retrieve_instance.assert_called_with(name="someapp")
         storage.remove_instance.assert_called_with(name="someapp")
 
-    @patch("sys.stderr")
+    @mock.patch("sys.stderr")
     def test_remove_instance_ec2_failure(self, stderr_mock):
-        conn = Mock()
+        conn = mock.Mock()
         conn.terminate_instances.side_effect = ValueError("Something went wrong")
         unit = api_storage.Unit(id="i-0800")
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.return_value = api_storage.Instance(name="secret",
                                                                       units=[unit])
         manager = ec2.EC2Manager(storage)
@@ -197,17 +197,17 @@ chmod +x /etc/cron.hourly/dump_vcls
         msg = "[ERROR] Failed to terminate EC2 instance: Something went wrong"
         stderr_mock.write.assert_called_with(msg)
 
-    @patch("feaas.storage.Bind")
+    @mock.patch("feaas.storage.Bind")
     def test_bind_instance(self, Bind):
         Bind.return_value = "abacaxi"
         instance = api_storage.Instance(name="myinstance",
                                         units=[api_storage.Unit(secret="abc-123",
                                                                 dns_name="10.1.1.2",
                                                                 id="i-0800")])
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
-        write_vcl = Mock()
+        write_vcl = mock.Mock()
         manager.write_vcl = write_vcl
         manager.bind("someapp", "myapp.cloud.tsuru.io")
         storage.retrieve_instance.assert_called_with(name="someapp")
@@ -215,17 +215,17 @@ chmod +x /etc/cron.hourly/dump_vcls
         Bind.assert_called_with("myapp.cloud.tsuru.io", instance)
         write_vcl.assert_called_with("10.1.1.2", "abc-123", "myapp.cloud.tsuru.io")
 
-    @patch("feaas.storage.Bind")
+    @mock.patch("feaas.storage.Bind")
     def test_unbind_instance(self, Bind):
         Bind.return_value = "abacaxi"
         instance = api_storage.Instance(name="myinstance",
                                         units=[api_storage.Unit(id="i-0800",
                                                                 secret="abc-123",
                                                                 dns_name="10.1.1.2")])
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
-        remove_vcl = Mock()
+        remove_vcl = mock.Mock()
         manager.remove_vcl = remove_vcl
         manager.unbind("someapp", "myapp.cloud.tsuru.io")
         storage.retrieve_instance.assert_called_with(name="someapp")
@@ -241,9 +241,9 @@ chmod +x /etc/cron.hourly/dump_vcls
             self.assertEqual('"%s"' % content.strip(),
                              manager.vcl_template())
 
-    @patch("varnish.VarnishHandler")
+    @mock.patch("varnish.VarnishHandler")
     def test_write_vcl(self, VarnishHandler):
-        varnish_handler = Mock()
+        varnish_handler = mock.Mock()
         VarnishHandler.return_value = varnish_handler
         app_host, instance_ip = "yeah.cloud.tsuru.io", "10.2.1.2"
         manager = ec2.EC2Manager(None)
@@ -255,9 +255,9 @@ chmod +x /etc/cron.hourly/dump_vcls
         varnish_handler.vcl_use.assert_called_with("feaas")
         varnish_handler.quit.assert_called()
 
-    @patch("varnish.VarnishHandler")
+    @mock.patch("varnish.VarnishHandler")
     def test_remove_vcl(self, VarnishHandler):
-        varnish_handler = Mock()
+        varnish_handler = mock.Mock()
         VarnishHandler.return_value = varnish_handler
         instance_ip = "10.2.2.1"
         manager = ec2.EC2Manager(None)
@@ -271,7 +271,7 @@ chmod +x /etc/cron.hourly/dump_vcls
         instance = api_storage.Instance(name="secret",
                                         units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
                                                                 id="i-0800")])
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         expected = [{"label": "Address", "value": "secret.cloud.tsuru.io"}]
@@ -284,7 +284,7 @@ chmod +x /etc/cron.hourly/dump_vcls
                  api_storage.Unit(dns_name="not-secret.cloud.tsuru.io",
                                   id="i-0800")]
         instance = api_storage.Instance(name="secret", units=units)
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         expected = [{"label": "Address", "value": "secret.cloud.tsuru.io"}]
@@ -292,14 +292,14 @@ chmod +x /etc/cron.hourly/dump_vcls
         storage.retrieve_instance.assert_called_with("secret")
 
     def test_info_instance_not_found(self):
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         with self.assertRaises(api_storage.InstanceNotFoundError):
             manager.info("secret")
 
     def test_status_running(self):
-        conn = Mock()
+        conn = mock.Mock()
         conn.get_all_instances.return_value = [self.get_fake_reservation(
             instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1",
                         "state": "running", "state_code": 16}],
@@ -307,7 +307,7 @@ chmod +x /etc/cron.hourly/dump_vcls
         instance = api_storage.Instance(name="secret",
                                         units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
                                                                 id="i-0800")])
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
@@ -315,7 +315,7 @@ chmod +x /etc/cron.hourly/dump_vcls
         self.assertEqual("running", status)
 
     def test_status_not_running(self):
-        conn = Mock()
+        conn = mock.Mock()
         conn.get_all_instances.return_value = [self.get_fake_reservation(
             instances=[{"id": "i-0800", "private_ip_address": "10.2.2.1",
                         "state": "pending", "state_code": 0}],
@@ -323,7 +323,7 @@ chmod +x /etc/cron.hourly/dump_vcls
         instance = api_storage.Instance(name="secret",
                                         units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
                                                                 id="i-0800")])
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
@@ -331,19 +331,19 @@ chmod +x /etc/cron.hourly/dump_vcls
         self.assertEqual("pending", status)
 
     def test_status_instance_not_found_in_storage(self):
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         with self.assertRaises(api_storage.InstanceNotFoundError):
             manager.status("secret")
 
     def test_status_instance_not_found_in_ec2_reservation(self):
-        conn = Mock()
+        conn = mock.Mock()
         conn.get_all_instances.return_value = []
         instance = api_storage.Instance(name="secret",
                                         units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
                                                                 id="i-0800")])
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
@@ -351,22 +351,113 @@ chmod +x /etc/cron.hourly/dump_vcls
             manager.status("secret")
 
     def test_status_instance_not_found_in_ec2_instances(self):
-        conn = Mock()
+        conn = mock.Mock()
         conn.get_all_instances.return_value = [self.get_fake_reservation(
             instances=[],
         )]
         instance = api_storage.Instance(name="secret",
                                         units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
                                                                 id="i-0800")])
-        storage = Mock()
+        storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
         with self.assertRaises(api_storage.InstanceNotFoundError):
             manager.status("secret")
 
+    def test_scale_instance_add_units(self):
+        instance = api_storage.Instance(name="secret",
+                                        units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
+                                                                id="i-0800")])
+        storage = mock.Mock()
+        storage.retrieve_instance.return_value = instance
+        storage.retrieve_binds.return_value = []
+        fake_run_unit, fake_data = self.get_fake_run_unit()
+        manager = ec2.EC2Manager(storage)
+        manager._run_unit = fake_run_unit
+        manager.scale_instance("secret", 4)
+        self.assertEqual(fake_data["calls"], 3)
+        instance.units.extend(fake_data["units"])
+        storage.store_instance.assert_called_with(instance)
+
+    def test_scale_instance_add_units_with_bind(self):
+        instance = api_storage.Instance(name="secret",
+                                        units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
+                                                                id="i-0800")])
+        storage = mock.Mock()
+        storage.retrieve_instance.return_value = instance
+        bind = api_storage.Bind(app_host="app.cloud.tsuru.io", instance="secret")
+        storage.retrieve_binds.return_value = [bind]
+        fake_run_unit, fake_data = self.get_fake_run_unit()
+        manager = ec2.EC2Manager(storage)
+        manager._run_unit = fake_run_unit
+        manager.write_vcl = mock.Mock()
+        manager.scale_instance("secret", 3)
+        units = fake_data["units"]
+        expected = []
+        for unit in units:
+            expected.append(mock.call(unit.dns_name, unit.secret, "app.cloud.tsuru.io"))
+        self.assertEqual(expected, manager.write_vcl.call_args_list)
+
+    def test_scale_instance_remove_units(self):
+        unit1 = api_storage.Unit(dns_name="secret1.cloud.tsuru.io", id="i-0800")
+        unit2 = api_storage.Unit(dns_name="secret2.cloud.tsuru.io", id="i-0801")
+        unit3 = api_storage.Unit(dns_name="secret3.cloud.tsuru.io", id="i-0802")
+        units = [unit1, unit2, unit3]
+        instance = api_storage.Instance(name="secret", units=units)
+        storage = mock.Mock()
+        storage.retrieve_instance.return_value = instance
+        manager = ec2.EC2Manager(storage)
+        manager._terminate_unit = mock.Mock()
+        manager.scale_instance("secret", 1)
+        expected = [mock.call(unit1), mock.call(unit2)]
+        self.assertEqual(expected, manager._terminate_unit.call_args_list)
+        self.assertEqual([unit3], instance.units)
+        storage.store_instance.assert_called_with(instance)
+
+    def test_scale_instance_no_change(self):
+        instance = api_storage.Instance(name="secret",
+                                        units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
+                                                                id="i-0800"),
+                                               api_storage.Unit(dns_name="secreti.cloud.tsuru.io",
+                                                                id="i-0801")])
+        storage = mock.Mock()
+        storage.retrieve_instance.return_value = instance
+        manager = ec2.EC2Manager(storage)
+        with self.assertRaises(ValueError) as cm:
+            manager.scale_instance("secret", 2)
+        exc = cm.exception
+        self.assertEqual(("instance already have 2 units",), exc.args)
+        storage.retrieve_instance.assert_called_with("secret")
+
+    def test_scale_instance_negative_quantity(self):
+        manager = ec2.EC2Manager(None)
+        with self.assertRaises(ValueError) as cm:
+            manager.scale_instance("myapp", -1)
+        exc = cm.exception
+        self.assertEqual(("quantity must be a positive integer",), exc.args)
+
+    def test_scale_instance_zero_quantity(self):
+        manager = ec2.EC2Manager(None)
+        with self.assertRaises(ValueError) as cm:
+            manager.scale_instance("myapp", 0)
+        exc = cm.exception
+        self.assertEqual(("quantity must be a positive integer",), exc.args)
+
     def get_fake_reservation(self, instances):
-        reservation = Mock(instances=[])
+        reservation = mock.Mock(instances=[])
         for instance in instances:
-            reservation.instances.append(Mock(**instance))
+            reservation.instances.append(mock.Mock(**instance))
         return reservation
+
+    def get_fake_run_unit(self):
+        fake_data = {"calls": 0, "units": []}
+
+        def fake_run_unit():
+            calls = fake_data["calls"] = fake_data["calls"] + 1
+            name = "i-080%d" % calls
+            unit = api_storage.Unit(id=name, dns_name="%s.domain.com" % name,
+                                    secret="%s-secret" % name)
+            fake_data["units"].append(unit)
+            return unit
+        return fake_run_unit, fake_data

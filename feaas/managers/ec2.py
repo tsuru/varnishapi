@@ -52,21 +52,14 @@ class EC2Manager(object):
 
     def add_instance(self, name):
         self._check_duplicate(name)
-        ami_id = os.environ.get("AMI_ID")
-        subnet_id = os.environ.get("SUBNET_ID")
-        reservation = None
-        secret = unicode(uuid.uuid4())
+        instance = None
         try:
-            reservation = self.connection.run_instances(image_id=ami_id,
-                                                        subnet_id=subnet_id,
-                                                        user_data=self._user_data(secret))
-            for instance in reservation.instances:
-                unit = storage.Unit(id=instance.id, dns_name=instance.dns_name, secret=secret)
-                self.storage.store_instance(storage.Instance(name, units=[unit]))
+            instance = storage.Instance(name, units=[self._run_unit()])
+            self.storage.store_instance(instance)
         except Exception as e:
             sys.stderr.write("[ERROR] Failed to create EC2 instance: %s" %
                              " ".join(e.args))
-        return reservation
+        return instance
 
     def _check_duplicate(self, name):
         try:
@@ -74,6 +67,17 @@ class EC2Manager(object):
             raise storage.InstanceAlreadyExistsError()
         except storage.InstanceNotFoundError:
             pass
+
+    def _run_unit(self):
+        ami_id = os.environ.get("AMI_ID")
+        subnet_id = os.environ.get("SUBNET_ID")
+        secret = unicode(uuid.uuid4())
+        reservation = self.connection.run_instances(image_id=ami_id,
+                                                    subnet_id=subnet_id,
+                                                    user_data=self._user_data(secret))
+        ec2_instance = reservation.instances[0]
+        return storage.Unit(id=ec2_instance.id, dns_name=ec2_instance.dns_name,
+                            secret=secret)
 
     def _user_data(self, secret):
         user_data_lines = None
@@ -153,3 +157,33 @@ class EC2Manager(object):
         if len(reservations) < 1 or len(reservations[0].instances) < 1:
             raise storage.InstanceNotFoundError()
         return reservations[0].instances[0].state
+
+    def scale_instance(self, name, quantity):
+        if quantity < 1:
+            raise ValueError("quantity must be a positive integer")
+        instance = self.storage.retrieve_instance(name)
+        new_units = quantity - len(instance.units)
+        if new_units == 0:
+            raise ValueError("instance already have %d units" % quantity)
+        if new_units < 0:
+            self._remove_units(instance, -1 * new_units)
+        else:
+            self._add_units(instance, new_units)
+
+    def _add_units(self, instance, quantity):
+        binds = self.storage.retrieve_binds(instance.name)
+        for i in xrange(quantity):
+            unit = self._run_unit()
+            instance.add_unit(unit)
+            if binds:
+                self.write_vcl(unit.dns_name, unit.secret, binds[0].app_host)
+        self.storage.store_instance(instance)
+
+    def _remove_units(self, instance, quantity):
+        units = []
+        for i in xrange(quantity):
+            self._terminate_unit(instance.units[i])
+            units.append(instance.units[i])
+        for unit in units:
+            instance.remove_unit(unit)
+        self.storage.store_instance(instance)
