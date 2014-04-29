@@ -166,18 +166,20 @@ class EC2Manager(object):
         if new_units == 0:
             raise ValueError("instance already have %d units" % quantity)
         if new_units < 0:
-            self._remove_units(instance, -1 * new_units)
-        else:
-            self._add_units(instance, new_units)
+            return self._remove_units(instance, -1 * new_units)
+        return self._add_units(instance, new_units)
 
     def _add_units(self, instance, quantity):
+        units = []
         binds = self.storage.retrieve_binds(instance.name)
         for i in xrange(quantity):
             unit = self._run_unit()
             instance.add_unit(unit)
             if binds:
                 self.write_vcl(unit.dns_name, unit.secret, binds[0].app_host)
+            units.append(unit)
         self.storage.store_instance(instance)
+        return units
 
     def _remove_units(self, instance, quantity):
         units = []
@@ -187,3 +189,4 @@ class EC2Manager(object):
         for unit in units:
             instance.remove_unit(unit)
         self.storage.store_instance(instance)
+        return units

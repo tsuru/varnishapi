@@ -375,10 +375,11 @@ chmod +x /etc/cron.hourly/dump_vcls
         fake_run_unit, fake_data = self.get_fake_run_unit()
         manager = ec2.EC2Manager(storage)
         manager._run_unit = fake_run_unit
-        manager.scale_instance("secret", 4)
+        units = manager.scale_instance("secret", 4)
         self.assertEqual(fake_data["calls"], 3)
         instance.units.extend(fake_data["units"])
         storage.store_instance.assert_called_with(instance)
+        self.assertEqual(fake_data["units"], units)
 
     def test_scale_instance_add_units_with_bind(self):
         instance = api_storage.Instance(name="secret",
@@ -409,11 +410,12 @@ chmod +x /etc/cron.hourly/dump_vcls
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         manager._terminate_unit = mock.Mock()
-        manager.scale_instance("secret", 1)
+        units = manager.scale_instance("secret", 1)
         expected = [mock.call(unit1), mock.call(unit2)]
         self.assertEqual(expected, manager._terminate_unit.call_args_list)
         self.assertEqual([unit3], instance.units)
         storage.store_instance.assert_called_with(instance)
+        self.assertEqual([unit1, unit2], units)
 
     def test_scale_instance_no_change(self):
         instance = api_storage.Instance(name="secret",
