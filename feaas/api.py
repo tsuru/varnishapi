@@ -86,6 +86,21 @@ def status(name):
     return "", states.get(status, 500)
 
 
+@api.route("/resources/<name>/scale", methods=["POST"])
+def scale_instance(name):
+    quantity = request.form.get("quantity")
+    if not quantity:
+        return "missing quantity", 400
+    manager = get_manager()
+    try:
+        manager.scale_instance(name, int(quantity))
+    except ValueError:
+        return "invalid quantity: %s" % quantity, 400
+    except storage.InstanceNotFoundError:
+        return "Instance not found", 404
+    return "", 201
+
+
 def register_manager(name, obj, override=False):
     if not override and name in managers:
         raise ValueError("Manager already registered")

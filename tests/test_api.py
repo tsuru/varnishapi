@@ -114,6 +114,41 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
 
+    def test_scale_instance(self):
+        self.manager.add_instance("someapp")
+        resp = self.api.post("/resources/someapp/scale",
+                             data={"quantity": "3"})
+        self.assertEqual(201, resp.status_code)
+        _, instance = self.manager.find_instance("someapp")
+        self.assertEqual(3, instance.units)
+
+    def test_scale_instance_invalid_quantity(self):
+        self.manager.add_instance("someapp")
+        resp = self.api.post("/resources/someapp/scale",
+                             data={"quantity": "chico"})
+        self.assertEqual(400, resp.status_code)
+        self.assertEqual("invalid quantity: chico", resp.data)
+
+    def test_scale_instance_negative_quantity(self):
+        self.manager.add_instance("someapp")
+        resp = self.api.post("/resources/someapp/scale",
+                             data={"quantity": "-2"})
+        self.assertEqual(400, resp.status_code)
+        self.assertEqual("invalid quantity: -2", resp.data)
+
+    def test_scale_instance_missing_quantity(self):
+        self.manager.add_instance("someapp")
+        resp = self.api.post("/resources/someapp/scale",
+                             data={"quality": "-2"})
+        self.assertEqual(400, resp.status_code)
+        self.assertEqual("missing quantity", resp.data)
+
+    def test_scale_instance_not_found(self):
+        resp = self.api.post("/resources/someapp/scale",
+                             data={"quantity": "2"})
+        self.assertEqual(404, resp.status_code)
+        self.assertEqual("Instance not found", resp.data)
+
 
 class ManagerTestCase(unittest.TestCase):
 
