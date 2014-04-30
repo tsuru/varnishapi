@@ -51,9 +51,9 @@ class UnitTestCase(unittest.TestCase):
 
     def test_to_dict(self):
         unit = storage.Unit(id="i-0800", dns_name="instance.cloud.tsuru.io",
-                            secret="abc123")
+                            secret="abc123", state="started")
         expected = {"id": "i-0800", "dns_name": "instance.cloud.tsuru.io",
-                    "secret": "abc123"}
+                    "secret": "abc123", "state": "started"}
         self.assertEqual(expected, unit.to_dict())
 
 
@@ -89,7 +89,8 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.addCleanup(self.client.feaas_test.instances.remove, {"name": "secret"})
         instance = self.client.feaas_test.instances.find_one({"name": "secret"})
         expected = {"name": "secret", "_id": instance["_id"],
-                    "units": [{"id": "i-0800", "secret": None, "dns_name": "secret.pos.com"}]}
+                    "units": [{"id": "i-0800", "secret": None, "dns_name": "secret.pos.com",
+                               "state": "creating"}]}
         self.assertEqual(expected, instance)
 
     def test_store_instance_with_units(self):

@@ -34,14 +34,15 @@ class Instance(object):
 
 class Unit(object):
 
-    def __init__(self, id=None, dns_name=None, secret=None):
+    def __init__(self, id=None, dns_name=None, secret=None, state="creating"):
         self.id = id
         self.dns_name = dns_name
         self.secret = secret
+        self.state = state
 
     def to_dict(self):
         return {"id": self.id, "dns_name": self.dns_name,
-                "secret": self.secret}
+                "secret": self.secret, "state": self.state}
 
 
 class Bind(object):
