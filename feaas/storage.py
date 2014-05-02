@@ -20,10 +20,11 @@ class Instance(object):
     def __init__(self, name=None, units=None):
         self.name = name
         self.units = units or []
+        for unit in self.units:
+            unit.instance = self
 
     def to_dict(self):
-        return {"name": self.name,
-                "units": [u.to_dict() for u in self.units]}
+        return {"name": self.name}
 
     def add_unit(self, unit):
         self.units.append(unit)
@@ -34,15 +35,18 @@ class Instance(object):
 
 class Unit(object):
 
-    def __init__(self, id=None, dns_name=None, secret=None, state="creating"):
+    def __init__(self, id=None, dns_name=None, secret=None, state="creating",
+                 instance=None):
         self.id = id
         self.dns_name = dns_name
         self.secret = secret
         self.state = state
+        self.instance = instance
 
     def to_dict(self):
         return {"id": self.id, "dns_name": self.dns_name,
-                "secret": self.secret, "state": self.state}
+                "secret": self.secret, "state": self.state,
+                "instance_name": self.instance.name}
 
 
 class Bind(object):
@@ -69,13 +73,15 @@ class MongoDBStorage(object):
     def store_instance(self, instance):
         self.db[self.collection_name].update({"name": instance.name}, instance.to_dict(),
                                              upsert=True)
+        self.db.units.remove({"instance_name": instance.name})
+        if instance.units:
+            self.db.units.insert([u.to_dict() for u in instance.units])
 
     def retrieve_instance(self, name):
         instance = self.db[self.collection_name].find_one({"name": name})
         if not instance:
             raise InstanceNotFoundError()
         del instance["_id"]
-        instance["units"] = [Unit(**u) for u in instance["units"]]
         return Instance(**instance)
 
     def remove_instance(self, name):

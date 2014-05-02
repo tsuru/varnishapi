@@ -12,20 +12,15 @@ from feaas import storage
 
 class InstanceTestCase(unittest.TestCase):
 
-    def test_init_units(self):
-        instance = storage.Instance()
-        self.assertEqual([], instance.units)
-        units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800",
-                              secret="abc123")]
-        instance = storage.Instance(units=units)
-        self.assertEqual(units, instance.units)
+    def test_init_with_units(self):
+        units = [storage.Unit(id="i-0800"), storage.Unit(id="i-0801")]
+        instance = storage.Instance(name="something", units=units)
+        for unit in units:
+            self.assertEqual(instance, unit.instance)
 
     def test_to_dict(self):
-        units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800",
-                              secret="abc123")]
-        instance = storage.Instance(name="myinstance", units=units)
-        expected = {"name": "myinstance",
-                    "units": [u.to_dict() for u in instance.units]}
+        instance = storage.Instance(name="myinstance")
+        expected = {"name": "myinstance"}
         self.assertEqual(expected, instance.to_dict())
 
     def test_add_unit(self):
@@ -50,10 +45,12 @@ class InstanceTestCase(unittest.TestCase):
 class UnitTestCase(unittest.TestCase):
 
     def test_to_dict(self):
+        instance = storage.Instance(name="myinstance")
         unit = storage.Unit(id="i-0800", dns_name="instance.cloud.tsuru.io",
-                            secret="abc123", state="started")
+                            secret="abc123", state="started", instance=instance)
         expected = {"id": "i-0800", "dns_name": "instance.cloud.tsuru.io",
-                    "secret": "abc123", "state": "started"}
+                    "secret": "abc123", "state": "started",
+                    "instance_name": "myinstance"}
         self.assertEqual(expected, unit.to_dict())
 
 
@@ -82,15 +79,11 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.storage = storage.MongoDBStorage(dbname="feaas_test")
 
     def test_store_instance(self):
-        instance = storage.Instance(name="secret",
-                                    units=[storage.Unit(id="i-0800",
-                                                        dns_name="secret.pos.com")])
+        instance = storage.Instance(name="secret")
         self.storage.store_instance(instance)
         self.addCleanup(self.client.feaas_test.instances.remove, {"name": "secret"})
         instance = self.client.feaas_test.instances.find_one({"name": "secret"})
-        expected = {"name": "secret", "_id": instance["_id"],
-                    "units": [{"id": "i-0800", "secret": None, "dns_name": "secret.pos.com",
-                               "state": "creating"}]}
+        expected = {"name": "secret", "_id": instance["_id"]}
         self.assertEqual(expected, instance)
 
     def test_store_instance_with_units(self):
@@ -98,28 +91,32 @@ class MongoDBStorageTestCase(unittest.TestCase):
         instance = storage.Instance(name="secret", units=units)
         self.storage.store_instance(instance)
         self.addCleanup(self.client.feaas_test.instances.remove, {"name": "secret"})
+        self.addCleanup(self.client.feaas_test.units.remove, {"instance_name": "secret"})
         instance = self.client.feaas_test.instances.find_one({"name": "secret"})
-        expected = {"name": "secret", "_id": instance["_id"],
-                    "units": [u.to_dict() for u in units]}
+        expected = {"name": "secret", "_id": instance["_id"]}
         self.assertEqual(expected, instance)
+        unit = self.client.feaas_test.units.find_one({"id": "i-0800",
+                                                      "instance_name": "secret"})
+        expected = units[0].to_dict()
+        expected["_id"] = unit["_id"]
+        self.assertEqual(expected, unit)
 
-    def test_store_instance_update(self):
-        units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800")]
+    def test_store_instance_update_with_units(self):
+        units = [storage.Unit(dns_name="instance1.cloud.tsuru.io", id="i-0800"),
+                 storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801"),
+                 storage.Unit(dns_name="instance3.cloud.tsuru.io", id="i-0802")]
         instance = storage.Instance(name="secret", units=units)
         self.storage.store_instance(instance)
         self.addCleanup(self.client.feaas_test.instances.remove, {"name": "secret"})
-        unit = storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801")
-        units.append(unit)
-        instance.add_unit(unit)
+        self.addCleanup(self.client.feaas_test.units.remove, {"instance_name": "secret"})
+        self.assert_units(units, "secret")
+        new_units = units[1:]
+        instance.units = new_units
         self.storage.store_instance(instance)
-        instance = self.client.feaas_test.instances.find_one({"name": "secret"})
-        expected = {"name": "secret", "_id": instance["_id"],
-                    "units": [u.to_dict() for u in units]}
-        self.assertEqual(expected, instance)
+        self.assert_units(new_units, "secret")
 
     def test_retrieve_instance(self):
-        units = [storage.Unit(dns_name="instance.cloud.tsuru.io", id="i-0800")]
-        expected = storage.Instance(name="what", units=units)
+        expected = storage.Instance(name="what")
         self.storage.store_instance(expected)
         got = self.storage.retrieve_instance("what")
         self.assertEqual(expected.to_dict(), got.to_dict())
@@ -168,3 +165,12 @@ class MongoDBStorageTestCase(unittest.TestCase):
                         {"instance_name": "years"})
         self.storage.remove_bind(bind)
         self.assertEqual([], self.storage.retrieve_binds("years"))
+
+    def assert_units(self, expected_units, instance_name):
+        cursor = self.client.feaas_test.units.find({"instance_name": instance_name})
+        units = []
+        expected = [u.to_dict() for u in expected_units]
+        for i, unit in enumerate(cursor):
+            expected[i]["_id"] = unit["_id"]
+            units.append(unit)
+        self.assertEqual(expected, units)
