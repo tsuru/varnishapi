@@ -166,6 +166,31 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.storage.remove_bind(bind)
         self.assertEqual([], self.storage.retrieve_binds("years"))
 
+    def test_lock_vcl_writer(self):
+        self.storage.lock_vcl_writer()
+        self.addCleanup(self.storage.unlock_vcl_writer)
+        lock = self.client.feaas_test.vcl_lock.find_one()
+        self.assertEqual("1", lock["_id"])
+        self.assertEqual(1, lock["state"])
+        self.storage.unlock_vcl_writer()
+        self.storage.lock_vcl_writer()
+        lock = self.client.feaas_test.vcl_lock.find_one()
+        self.assertEqual("1", lock["_id"])
+        self.assertEqual(1, lock["state"])
+
+    def test_unlock_vcl_writer(self):
+        self.storage.lock_vcl_writer()
+        self.storage.unlock_vcl_writer()
+        lock = self.client.feaas_test.vcl_lock.find_one()
+        self.assertEqual("1", lock["_id"])
+        self.assertEqual(0, lock["state"])
+
+    def test_unlock_vcl_writer_double(self):
+        self.storage.lock_vcl_writer()
+        self.storage.unlock_vcl_writer()
+        with self.assertRaises(storage.DoubleUnlockError):
+            self.storage.unlock_vcl_writer()
+
     def assert_units(self, expected_units, instance_name):
         cursor = self.client.feaas_test.units.find({"instance_name": instance_name})
         units = []

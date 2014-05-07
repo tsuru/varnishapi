@@ -15,6 +15,10 @@ class InstanceAlreadyExistsError(Exception):
     pass
 
 
+class DoubleUnlockError(Exception):
+    pass
+
+
 class Instance(object):
 
     def __init__(self, name=None, units=None):
@@ -103,3 +107,17 @@ class MongoDBStorage(object):
     def remove_bind(self, bind):
         self.db.binds.remove({"app_host": bind.app_host,
                               "instance_name": bind.instance.name})
+
+    def lock_vcl_writer(self):
+        n = 0
+        while n < 1:
+            r = self.db.vcl_lock.update({"_id": "1", "state": 0},
+                                        {"_id": "1", "state": 1},
+                                        upsert=True)
+            n = r["n"]
+
+    def unlock_vcl_writer(self):
+        r = self.db.vcl_lock.update({"_id": "1", "state": 1},
+                                    {"$set": {"state": 0}})
+        if r["n"] < 1:
+            raise DoubleUnlockError()
