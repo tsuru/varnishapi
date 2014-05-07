@@ -191,6 +191,30 @@ class MongoDBStorageTestCase(unittest.TestCase):
         with self.assertRaises(storage.DoubleUnlockError):
             self.storage.unlock_vcl_writer()
 
+    def test_load_units(self):
+        units = [storage.Unit(dns_name="instance1.cloud.tsuru.io", id="i-0800"),
+                 storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801"),
+                 storage.Unit(dns_name="instance3.cloud.tsuru.io", id="i-0802",
+                              state="started")]
+        instance = storage.Instance(name="great", units=units)
+        self.storage.store_instance(instance)
+        self.addCleanup(self.storage.remove_instance, instance.name)
+        got_units = self.storage.load_units("creating")
+        self.assertEqual([u.to_dict() for u in units[:2]],
+                         [u.to_dict() for u in got_units])
+
+    def test_load_units_limited(self):
+        units = [storage.Unit(dns_name="instance1.cloud.tsuru.io", id="i-0800"),
+                 storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801"),
+                 storage.Unit(dns_name="instance3.cloud.tsuru.io", id="i-0802",
+                              state="started")]
+        instance = storage.Instance(name="great", units=units)
+        self.storage.store_instance(instance)
+        self.addCleanup(self.storage.remove_instance, instance.name)
+        got_units = self.storage.load_units("creating", limit=1)
+        self.assertEqual([u.to_dict() for u in units[:1]],
+                         [u.to_dict() for u in got_units])
+
     def assert_units(self, expected_units, instance_name):
         cursor = self.client.feaas_test.units.find({"instance_name": instance_name})
         units = []

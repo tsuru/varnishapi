@@ -121,3 +121,15 @@ class MongoDBStorage(object):
                                     {"$set": {"state": 0}})
         if r["n"] < 1:
             raise DoubleUnlockError()
+
+    def load_units(self, state, limit=None):
+        cursor = self.db.units.find({"state": state})
+        if limit:
+            cursor = cursor.limit(limit)
+        units = []
+        for unit in cursor:
+            unit["instance"] = Instance(name=unit["instance_name"])
+            del unit["instance_name"]
+            del unit["_id"]
+            units.append(Unit(**unit))
+        return units
