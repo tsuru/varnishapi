@@ -89,6 +89,7 @@ class MongoDBStorage(object):
         return Instance(**instance)
 
     def remove_instance(self, name):
+        self.db.units.remove({"instance_name": name})
         self.db[self.collection_name].remove({"name": name})
 
     def store_bind(self, bind):
