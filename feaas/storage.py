@@ -134,3 +134,8 @@ class MongoDBStorage(object):
             del unit["_id"]
             units.append(Unit(**unit))
         return units
+
+    def update_units(self, units, **changes):
+        ids = [u.id for u in units]
+        self.db.units.update({"id": {"$in": ids}}, {"$set": changes},
+                             multi=True)

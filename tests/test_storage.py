@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+import copy
 import unittest
 
 import freezegun
@@ -223,6 +224,21 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.addCleanup(self.storage.remove_instance, instance.name)
         got_units = self.storage.load_units("creating", limit=1)
         self.assertEqual([u.to_dict() for u in units[:1]],
+                         [u.to_dict() for u in got_units])
+
+    def test_update_units(self):
+        units = [storage.Unit(dns_name="instance1.cloud.tsuru.io", id="i-0800"),
+                 storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801"),
+                 storage.Unit(dns_name="instance3.cloud.tsuru.io", id="i-0802",
+                              state="started")]
+        instance = storage.Instance(name="great", units=units)
+        self.storage.store_instance(instance)
+        self.addCleanup(self.storage.remove_instance, instance.name)
+        units[0].state = "started"
+        units[1].state = "started"
+        self.storage.update_units(units, state="started")
+        got_units = self.storage.load_units("started")
+        self.assertEqual([u.to_dict() for u in units],
                          [u.to_dict() for u in got_units])
 
     def assert_units(self, expected_units, instance_name):
