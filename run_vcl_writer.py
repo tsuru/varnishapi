@@ -7,7 +7,7 @@ import argparse
 from feaas import api, vcl_writer
 
 
-def run(storage):
+def run(manager):
     parser = argparse.ArgumentParser("VCL Writer runner")
     parser.add_argument("-i", "--interval",
                         help="Interval for running VCLWriter (in seconds)",
@@ -16,9 +16,9 @@ def run(storage):
                         help="Maximum number of units to process at a time",
                         type=int)
     args = parser.parse_args()
-    writer = vcl_writer.VCLWriter(storage, args.interval, args.max_items)
+    writer = vcl_writer.VCLWriter(manager, args.interval, args.max_items)
     writer.loop()
 
 if __name__ == "__main__":
     manager = api.get_manager()
-    run(manager.storage)
+    run(manager)
