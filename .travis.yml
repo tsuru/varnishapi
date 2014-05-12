@@ -5,3 +5,9 @@ before_install:
   - sudo apt-get install `cat requirements.apt` -qqy
 script: make test flake8
 services: mongodb
+notifications:
+  email:
+    recipients:
+      - tsuru@corp.globo.com
+    on_success: change
+    on_failure: change
