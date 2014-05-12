@@ -125,6 +125,18 @@ class MongoDBStorageTestCase(unittest.TestCase):
         with self.assertRaises(storage.InstanceNotFoundError):
             self.storage.retrieve_instance("secret")
 
+    def test_retrieve_instance_with_units(self):
+        units = [storage.Unit(dns_name="instance1.cloud.tsuru.io", id="i-0800"),
+                 storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801"),
+                 storage.Unit(dns_name="instance3.cloud.tsuru.io", id="i-0802")]
+        instance = storage.Instance(name="what", units=units)
+        self.storage.store_instance(instance)
+        self.addCleanup(self.client.feaas_test.instances.remove, {"name": instance.name})
+        self.addCleanup(self.client.feaas_test.units.remove, {"instance_name": instance.name})
+        got_instance = self.storage.retrieve_instance("what", True)
+        self.assertEqual([u.to_dict() for u in units],
+                         [u.to_dict() for u in got_instance.units])
+
     def test_remove_instance(self):
         instance = storage.Instance(name="years")
         self.storage.store_instance(instance)
