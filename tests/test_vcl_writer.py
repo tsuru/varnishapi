@@ -34,7 +34,7 @@ class VCLWriterTestCase(unittest.TestCase):
         writer.stop()
         t.join()
         fake_run.assert_called()
-        strg.init_vcl_lock.assert_called_once()
+        strg.init_vcl_locker.assert_called_once()
 
     def test_stop(self):
         manager = mock.Mock(storage=None)
