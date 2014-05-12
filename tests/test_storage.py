@@ -137,9 +137,19 @@ class MongoDBStorageTestCase(unittest.TestCase):
                  storage.Unit(dns_name="instance3.cloud.tsuru.io", id="i-0802")]
         instance = storage.Instance(name="secret", units=units)
         self.storage.store_instance(instance)
-        self.storage.store_instance(instance)
         self.storage.remove_instance(instance.name)
         self.assertIsNone(self.client.feaas_test.units.find_one({"instance_name": instance.name}))
+
+    def test_remove_instance_with_binds(self):
+        units = [storage.Unit(dns_name="instance1.cloud.tsuru.io", id="i-0800"),
+                 storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801"),
+                 storage.Unit(dns_name="instance3.cloud.tsuru.io", id="i-0802")]
+        instance = storage.Instance(name="secret", units=units)
+        self.storage.store_instance(instance)
+        bind = storage.Bind("myapp.cloud.tsuru.io", instance)
+        self.storage.store_bind(bind)
+        self.storage.remove_instance(instance.name)
+        self.assertIsNone(self.client.feaas_test.binds.find_one({"instance_name": instance.name}))
 
     @freezegun.freeze_time("2014-02-16 12:00:01")
     def test_store_bind(self):
