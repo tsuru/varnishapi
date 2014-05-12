@@ -132,7 +132,7 @@ class EC2Manager(object):
             return '"%s"' % content.strip()
 
     def remove_instance(self, name):
-        instance = self.storage.retrieve_instance(name=name)
+        instance = self.storage.retrieve_instance(name=name, fetch_units=True)
         for unit in instance.units:
             self._terminate_unit(unit)
         self.storage.remove_instance(name=name)

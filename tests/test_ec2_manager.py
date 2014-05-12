@@ -180,7 +180,8 @@ chmod +x /etc/cron.hourly/dump_vcls
         manager._connection = conn
         manager.remove_instance("someapp")
         conn.terminate_instances.assert_called_with(instance_ids=["i-0800"])
-        storage.retrieve_instance.assert_called_with(name="someapp")
+        storage.retrieve_instance.assert_called_with(name="someapp",
+                                                     fetch_units=True)
         storage.remove_instance.assert_called_with(name="someapp")
 
     @mock.patch("sys.stderr")
