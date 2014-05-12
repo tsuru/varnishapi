@@ -81,15 +81,12 @@ class MongoDBStorage(object):
         if instance.units:
             self.db.units.insert([u.to_dict() for u in instance.units])
 
-    def retrieve_instance(self, name, fetch_units=False):
+    def retrieve_instance(self, name):
         instance = self.db[self.collection_name].find_one({"name": name})
         if not instance:
             raise InstanceNotFoundError()
         del instance["_id"]
-        units = None
-        if fetch_units:
-            units = self.retrieve_units(name)
-        return Instance(name=instance["name"], units=units)
+        return Instance(name=instance["name"], units=self.retrieve_units(name))
 
     def retrieve_units(self, instance_name):
         cursor = self.db.units.find({"instance_name": instance_name})
