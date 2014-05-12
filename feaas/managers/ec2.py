@@ -77,7 +77,7 @@ class EC2Manager(object):
                                                     user_data=self._user_data(secret))
         ec2_instance = reservation.instances[0]
         return storage.Unit(id=ec2_instance.id, dns_name=ec2_instance.dns_name,
-                            secret=secret)
+                            secret=secret, state="creating")
 
     def _user_data(self, secret):
         user_data_lines = None
@@ -98,8 +98,6 @@ class EC2Manager(object):
 
     def bind(self, name, app_host):
         instance = self.storage.retrieve_instance(name=name)
-        for unit in instance.units:
-            self.write_vcl(unit.dns_name, unit.secret, app_host)
         bind = storage.Bind(app_host, instance)
         self.storage.store_bind(bind)
 
@@ -171,12 +169,9 @@ class EC2Manager(object):
 
     def _add_units(self, instance, quantity):
         units = []
-        binds = self.storage.retrieve_binds(instance.name)
         for i in xrange(quantity):
             unit = self._run_unit()
             instance.add_unit(unit)
-            if binds:
-                self.write_vcl(unit.dns_name, unit.secret, binds[0].app_host)
             units.append(unit)
         self.storage.store_instance(instance)
         return units

@@ -207,13 +207,10 @@ chmod +x /etc/cron.hourly/dump_vcls
         storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
-        write_vcl = mock.Mock()
-        manager.write_vcl = write_vcl
         manager.bind("someapp", "myapp.cloud.tsuru.io")
         storage.retrieve_instance.assert_called_with(name="someapp")
         storage.store_bind.assert_called_with("abacaxi")
         Bind.assert_called_with("myapp.cloud.tsuru.io", instance)
-        write_vcl.assert_called_with("10.1.1.2", "abc-123", "myapp.cloud.tsuru.io")
 
     @mock.patch("feaas.storage.Bind")
     def test_unbind_instance(self, Bind):
@@ -380,25 +377,6 @@ chmod +x /etc/cron.hourly/dump_vcls
         instance.units.extend(fake_data["units"])
         storage.store_instance.assert_called_with(instance)
         self.assertEqual(fake_data["units"], units)
-
-    def test_scale_instance_add_units_with_bind(self):
-        instance = api_storage.Instance(name="secret",
-                                        units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
-                                                                id="i-0800")])
-        storage = mock.Mock()
-        storage.retrieve_instance.return_value = instance
-        bind = api_storage.Bind(app_host="app.cloud.tsuru.io", instance="secret")
-        storage.retrieve_binds.return_value = [bind]
-        fake_run_unit, fake_data = self.get_fake_run_unit()
-        manager = ec2.EC2Manager(storage)
-        manager._run_unit = fake_run_unit
-        manager.write_vcl = mock.Mock()
-        manager.scale_instance("secret", 3)
-        units = fake_data["units"]
-        expected = []
-        for unit in units:
-            expected.append(mock.call(unit.dns_name, unit.secret, "app.cloud.tsuru.io"))
-        self.assertEqual(expected, manager.write_vcl.call_args_list)
 
     def test_scale_instance_remove_units(self):
         unit1 = api_storage.Unit(dns_name="secret1.cloud.tsuru.io", id="i-0800")
