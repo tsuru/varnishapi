@@ -16,6 +16,7 @@ class VCLWriter(object):
 
     def loop(self):
         self.running = True
+        self.storage.init_vcl_lock()
         while self.running:
             self.run()
             time.sleep(self.interval)

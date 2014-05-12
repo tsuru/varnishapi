@@ -23,7 +23,8 @@ class VCLWriterTestCase(unittest.TestCase):
         self.assertEqual(3, writer.max_items)
 
     def test_loop(self):
-        manager = mock.Mock(storage=None)
+        strg = mock.Mock()
+        manager = mock.Mock(storage=strg)
         fake_run = mock.Mock()
         writer = vcl_writer.VCLWriter(manager, interval=3, max_items=3)
         writer.run = fake_run
@@ -33,6 +34,7 @@ class VCLWriterTestCase(unittest.TestCase):
         writer.stop()
         t.join()
         fake_run.assert_called()
+        strg.init_vcl_lock.assert_called_once()
 
     def test_stop(self):
         manager = mock.Mock(storage=None)
