@@ -123,6 +123,12 @@ class MongoDBStorage(object):
         self.db.binds.remove({"app_host": bind.app_host,
                               "instance_name": bind.instance.name})
 
+    def init_vcl_lock(self):
+        try:
+            self.db.vcl_lock.insert({"_id": "1", "state": 0})
+        except pymongo.errors.DuplicateKeyError:
+            pass
+
     def lock_vcl_writer(self):
         n = 0
         while n < 1:

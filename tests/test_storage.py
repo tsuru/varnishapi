@@ -201,6 +201,23 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.storage.remove_bind(bind)
         self.assertEqual([], self.storage.retrieve_binds("years"))
 
+    def test_init_vcl_lock(self):
+        self.client.feaas_test.vcl_lock.remove({"_id": "1"})
+        self.storage.init_vcl_lock()
+        lock = self.client.feaas_test.vcl_lock.find_one()
+        self.assertEqual("1", lock["_id"])
+        self.assertEqual(0, lock["state"])
+
+    def test_init_vcl_lock_duplicate(self):
+        self.client.feaas_test.vcl_lock.remove({"_id": "1"})
+        self.storage.init_vcl_lock()
+        self.storage.lock_vcl_writer()
+        self.addCleanup(self.storage.unlock_vcl_writer)
+        self.storage.init_vcl_lock()
+        lock = self.client.feaas_test.vcl_lock.find_one()
+        self.assertEqual("1", lock["_id"])
+        self.assertEqual(1, lock["state"])
+
     def test_lock_vcl_writer(self):
         self.storage.lock_vcl_writer()
         self.addCleanup(self.storage.unlock_vcl_writer)
@@ -218,7 +235,7 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.addCleanup(self.storage.unlock_vcl_writer)
         t = threading.Thread(target=self.storage.lock_vcl_writer)
         t.start()
-        time.sleep(.5)
+        time.sleep(.1)
         self.storage.unlock_vcl_writer()
         t.join()
         lock = self.client.feaas_test.vcl_lock.find_one()
