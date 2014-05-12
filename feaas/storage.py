@@ -127,13 +127,12 @@ class MongoDBStorage(object):
         n = 0
         while n < 1:
             r = self.db.vcl_lock.update({"_id": "1", "state": 0},
-                                        {"_id": "1", "state": 1},
-                                        upsert=True)
+                                        {"_id": "1", "state": 1})
             n = r["n"]
 
     def unlock_vcl_writer(self):
         r = self.db.vcl_lock.update({"_id": "1", "state": 1},
-                                    {"$set": {"state": 0}})
+                                    {"_id": "1", "state": 0})
         if r["n"] < 1:
             raise DoubleUnlockError()
 

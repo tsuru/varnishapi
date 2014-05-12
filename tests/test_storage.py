@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+import threading
+import time
 import unittest
 
 import freezegun
@@ -70,6 +72,7 @@ class MongoDBStorageTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.client = pymongo.MongoClient('localhost', 27017)
+        cls.client.feaas_test.vcl_lock.insert({"_id": "1", "state": 0})
 
     @classmethod
     def tearDownClass(cls):
@@ -206,6 +209,18 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.assertEqual(1, lock["state"])
         self.storage.unlock_vcl_writer()
         self.storage.lock_vcl_writer()
+        lock = self.client.feaas_test.vcl_lock.find_one()
+        self.assertEqual("1", lock["_id"])
+        self.assertEqual(1, lock["state"])
+
+    def test_lock_vcl_writer_double_lock(self):
+        self.storage.lock_vcl_writer()
+        self.addCleanup(self.storage.unlock_vcl_writer)
+        t = threading.Thread(target=self.storage.lock_vcl_writer)
+        t.start()
+        time.sleep(.5)
+        self.storage.unlock_vcl_writer()
+        t.join()
         lock = self.client.feaas_test.vcl_lock.find_one()
         self.assertEqual("1", lock["_id"])
         self.assertEqual(1, lock["state"])
