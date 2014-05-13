@@ -28,6 +28,7 @@ class VCLWriterTestCase(unittest.TestCase):
         fake_run = mock.Mock()
         writer = vcl_writer.VCLWriter(manager, interval=3, max_items=3)
         writer.run = fake_run
+        writer.locker = mock.Mock()
         t = threading.Thread(target=writer.loop)
         t.start()
         time.sleep(1)
@@ -36,10 +37,11 @@ class VCLWriterTestCase(unittest.TestCase):
         fake_run.assert_called()
         expected_calls = [mock.call(vcl_writer.UNITS_LOCKER),
                           mock.call(vcl_writer.BINDS_LOCKER)]
-        self.assertEqual(expected_calls, strg.init_locker.call_args_list)
+        self.assertEqual(expected_calls,
+                         writer.locker.init_locker.call_args_list)
 
     def test_stop(self):
-        manager = mock.Mock(storage=None)
+        manager = mock.Mock(storage=mock.Mock())
         writer = vcl_writer.VCLWriter(manager)
         writer.running = True
         writer.stop()
@@ -55,10 +57,11 @@ class VCLWriterTestCase(unittest.TestCase):
         writer = vcl_writer.VCLWriter(manager, max_items=3)
         writer._is_unit_up = lambda unit: unit == units[1]
         writer.bind_units = mock.Mock()
+        writer.locker = mock.Mock()
         writer.run()
-        strg.lock.assert_called_with(vcl_writer.UNITS_LOCKER)
+        writer.locker.lock.assert_called_with(vcl_writer.UNITS_LOCKER)
         strg.retrieve_units.assert_called_with(state="creating", limit=3)
-        strg.unlock.assert_called_with(vcl_writer.UNITS_LOCKER)
+        writer.locker.unlock.assert_called_with(vcl_writer.UNITS_LOCKER)
         writer.bind_units.assert_called_with([units[1]])
         strg.update_units.assert_called_with([units[1]], state="started")
 
@@ -94,7 +97,7 @@ class VCLWriterTestCase(unittest.TestCase):
         telnet_client = mock.Mock()
         Telnet.return_value = telnet_client
         unit = storage.Unit(dns_name="instance1.cloud.tsuru.io")
-        manager = mock.Mock(storage=None)
+        manager = mock.Mock(storage=mock.Mock())
         writer = vcl_writer.VCLWriter(manager, max_items=3)
         self.assertTrue(writer._is_unit_up(unit))
         Telnet.assert_called_with(unit.dns_name, "6082", timeout=3)

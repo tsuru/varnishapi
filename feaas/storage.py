@@ -125,6 +125,17 @@ class MongoDBStorage(object):
         self.db.binds.remove({"app_host": bind.app_host,
                               "instance_name": bind.instance.name})
 
+    def update_units(self, units, **changes):
+        ids = [u.id for u in units]
+        self.db.units.update({"id": {"$in": ids}}, {"$set": changes},
+                             multi=True)
+
+
+class MultiLocker(object):
+
+    def __init__(self, storage):
+        self.db = storage.db
+
     def init_locker(self, lock_name):
         try:
             self.db.vcl_lock.insert({"_id": lock_name, "state": 0})
@@ -143,8 +154,3 @@ class MongoDBStorage(object):
                                     {"_id": lock_name, "state": 0})
         if r["n"] < 1:
             raise DoubleUnlockError(lock_name)
-
-    def update_units(self, units, **changes):
-        ids = [u.id for u in units]
-        self.db.units.update({"id": {"$in": ids}}, {"$set": changes},
-                             multi=True)
