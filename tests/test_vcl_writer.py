@@ -50,14 +50,14 @@ class VCLWriterTestCase(unittest.TestCase):
                  storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801"),
                  storage.Unit(dns_name="instance3.cloud.tsuru.io", id="i-0802")]
         strg = mock.Mock()
-        strg.load_units.return_value = units
+        strg.retrieve_units.return_value = units
         manager = mock.Mock(storage=strg)
         writer = vcl_writer.VCLWriter(manager, max_items=3)
         writer._is_unit_up = lambda unit: unit == units[1]
         writer.bind_units = mock.Mock()
         writer.run()
         strg.lock.assert_called_with(vcl_writer.UNITS_LOCKER)
-        strg.load_units.assert_called_with(state="creating", limit=3)
+        strg.retrieve_units.assert_called_with(state="creating", limit=3)
         strg.unlock.assert_called_with(vcl_writer.UNITS_LOCKER)
         writer.bind_units.assert_called_with([units[1]])
         strg.update_units.assert_called_with([units[1]], state="started")
@@ -72,7 +72,7 @@ class VCLWriterTestCase(unittest.TestCase):
                  storage.Unit(dns_name="instance2-1.cloud.tsuru.io", id="i-0802",
                               instance=instance2, secret="abc456")]
         strg = mock.Mock()
-        strg.load_units.return_value = units
+        strg.retrieve_units.return_value = units
         strg.retrieve_binds.return_value = [storage.Bind("myapp.cloud.tsuru.io",
                                                          instance1)]
         manager = mock.Mock(storage=strg)
