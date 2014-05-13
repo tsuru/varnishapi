@@ -368,7 +368,6 @@ chmod +x /etc/cron.hourly/dump_vcls
                                                                 id="i-0800")])
         storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
-        storage.retrieve_binds.return_value = []
         fake_run_unit, fake_data = self.get_fake_run_unit()
         manager = ec2.EC2Manager(storage)
         manager._run_unit = fake_run_unit

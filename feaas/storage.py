@@ -111,9 +111,9 @@ class MongoDBStorage(object):
     def store_bind(self, bind):
         self.db.binds.insert(bind.to_dict())
 
-    def retrieve_binds(self, instance_name):
+    def retrieve_binds(self, **query):
         binds = []
-        items = self.db.binds.find({"instance_name": instance_name})
+        items = self.db.binds.find(query)
         for item in items:
             instance = Instance(name=item["instance_name"])
             binds.append(Bind(app_host=item["app_host"],

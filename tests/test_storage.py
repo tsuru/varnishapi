@@ -183,9 +183,22 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.storage.store_bind(bind2)
         self.addCleanup(self.client.feaas_test.binds.remove,
                         {"instance_name": "years"})
-        binds = self.storage.retrieve_binds("years")
+        binds = self.storage.retrieve_binds(instance_name="years")
         binds = [b.to_dict() for b in binds]
         self.assertEqual([bind1.to_dict(), bind2.to_dict()], binds)
+
+    @freezegun.freeze_time("2014-02-16 12:00:01")
+    def test_retrieve_binds_query(self):
+        instance = storage.Instance(name="years")
+        bind1 = storage.Bind(app_host="something.where.com", instance=instance)
+        self.storage.store_bind(bind1)
+        bind2 = storage.Bind(app_host="belong.where.com", instance=instance)
+        self.storage.store_bind(bind2)
+        self.addCleanup(self.client.feaas_test.binds.remove,
+                        {"instance_name": "years"})
+        binds = self.storage.retrieve_binds(app_host="belong.where.com")
+        binds = [b.to_dict() for b in binds]
+        self.assertEqual([bind2.to_dict()], binds)
 
     def test_remove_bind(self):
         instance = storage.Instance(name="years")
@@ -194,7 +207,7 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.addCleanup(self.client.feaas_test.binds.remove,
                         {"instance_name": "years"})
         self.storage.remove_bind(bind)
-        self.assertEqual([], self.storage.retrieve_binds("years"))
+        self.assertEqual([], self.storage.retrieve_binds(instance_name="years"))
 
     def test_init_locker(self):
         self.storage.init_locker("test_init")

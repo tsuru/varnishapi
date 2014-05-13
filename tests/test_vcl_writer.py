@@ -78,7 +78,8 @@ class VCLWriterTestCase(unittest.TestCase):
         manager = mock.Mock(storage=strg)
         writer = vcl_writer.VCLWriter(manager, max_items=3)
         writer.bind_units(units)
-        expected_calls = [mock.call("myinstance"), mock.call("yourinstance")]
+        expected_calls = [mock.call(instance_name="myinstance"),
+                          mock.call(instance_name="yourinstance")]
         self.assertEqual(expected_calls, strg.retrieve_binds.call_args_list)
         expected_calls = [mock.call("instance1-1.cloud.tsuru.io", "abc123",
                                     "myapp.cloud.tsuru.io"),

@@ -31,8 +31,7 @@ class VCLWriter(object):
     def run(self):
         self.storage.lock(UNITS_LOCKER)
         try:
-            units = self.storage.retrieve_units(state="creating",
-                                                limit=self.max_items)
+            units = self.storage.retrieve_units(state="creating", limit=self.max_items)
             up_units = []
             for unit in units:
                 if self._is_unit_up(unit):
@@ -46,10 +45,10 @@ class VCLWriter(object):
     def bind_units(self, units):
         binds_dict = {}
         for unit in units:
-            instance_name = unit.instance.name
-            if instance_name not in binds_dict:
-                binds_dict[instance_name] = self.storage.retrieve_binds(instance_name)
-            binds = binds_dict[instance_name]
+            iname = unit.instance.name
+            if iname not in binds_dict:
+                binds_dict[iname] = self.storage.retrieve_binds(instance_name=iname)
+            binds = binds_dict[iname]
             for bind in binds:
                 self.manager.write_vcl(unit.dns_name, unit.secret, bind.app_host)
 
