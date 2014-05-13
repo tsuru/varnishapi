@@ -22,8 +22,8 @@ class VCLWriter(object):
 
     def loop(self):
         self.running = True
-        self.locker.init_locker(UNITS_LOCKER)
-        self.locker.init_locker(BINDS_LOCKER)
+        self.locker.init(UNITS_LOCKER)
+        self.locker.init(BINDS_LOCKER)
         while self.running:
             self.run()
             time.sleep(self.interval)

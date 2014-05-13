@@ -136,7 +136,7 @@ class MultiLocker(object):
     def __init__(self, storage):
         self.db = storage.db
 
-    def init_locker(self, lock_name):
+    def init(self, lock_name):
         try:
             self.db.vcl_lock.insert({"_id": lock_name, "state": 0})
         except pymongo.errors.DuplicateKeyError:

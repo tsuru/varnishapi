@@ -25,24 +25,24 @@ class MultiLockerTestCase(unittest.TestCase):
         strg = storage.MongoDBStorage(dbname="feaas_test")
         self.locker = storage.MultiLocker(strg)
 
-    def test_init_locker(self):
-        self.locker.init_locker("test_init")
+    def test_init(self):
+        self.locker.init("test_init")
         self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_init"})
         lock = self.client.feaas_test.vcl_lock.find_one()
         self.assertEqual("test_init", lock["_id"])
         self.assertEqual(0, lock["state"])
 
-    def test_init_locker_duplicate(self):
-        self.locker.init_locker("test_init")
+    def test_init_duplicate(self):
+        self.locker.init("test_init")
         self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_init"})
         self.locker.lock("test_init")
-        self.locker.init_locker("test_init")
+        self.locker.init("test_init")
         lock = self.client.feaas_test.vcl_lock.find_one()
         self.assertEqual("test_init", lock["_id"])
         self.assertEqual(1, lock["state"])
 
     def test_lock(self):
-        self.locker.init_locker("test_lock")
+        self.locker.init("test_lock")
         self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_lock"})
         self.locker.lock("test_lock")
         lock = self.client.feaas_test.vcl_lock.find_one()
@@ -55,7 +55,7 @@ class MultiLockerTestCase(unittest.TestCase):
         self.assertEqual(1, lock["state"])
 
     def test_double_lock(self):
-        self.locker.init_locker("test_lock")
+        self.locker.init("test_lock")
         self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_lock"})
         self.locker.lock("test_lock")
         t = threading.Thread(target=self.locker.lock, args=("test_lock",))
@@ -68,7 +68,7 @@ class MultiLockerTestCase(unittest.TestCase):
         self.assertEqual(1, lock["state"])
 
     def test_unlock(self):
-        self.locker.init_locker("test_unlock")
+        self.locker.init("test_unlock")
         self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_unlock"})
         self.locker.lock("test_unlock")
         self.locker.unlock("test_unlock")
@@ -77,7 +77,7 @@ class MultiLockerTestCase(unittest.TestCase):
         self.assertEqual(0, lock["state"])
 
     def test_double_unlock(self):
-        self.locker.init_locker("test_unlock")
+        self.locker.init("test_unlock")
         self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_unlock"})
         self.locker.lock("test_unlock")
         self.locker.unlock("test_unlock")

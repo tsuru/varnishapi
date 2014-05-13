@@ -38,7 +38,7 @@ class VCLWriterTestCase(unittest.TestCase):
         expected_calls = [mock.call(vcl_writer.UNITS_LOCKER),
                           mock.call(vcl_writer.BINDS_LOCKER)]
         self.assertEqual(expected_calls,
-                         writer.locker.init_locker.call_args_list)
+                         writer.locker.init.call_args_list)
 
     def test_stop(self):
         manager = mock.Mock(storage=mock.Mock())
