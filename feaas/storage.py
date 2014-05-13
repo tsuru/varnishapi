@@ -91,14 +91,7 @@ class MongoDBStorage(object):
         return Instance(name=instance["name"], units=self.retrieve_units(name))
 
     def retrieve_units(self, instance_name):
-        cursor = self.db.units.find({"instance_name": instance_name})
-        units = []
-        for unit in cursor:
-            unit["instance"] = Instance(name=unit["instance_name"])
-            del unit["instance_name"]
-            del unit["_id"]
-            units.append(Unit(**unit))
-        return units
+        return self.load_units(instance_name=instance_name)
 
     def remove_instance(self, name):
         self.db.binds.remove({"instance_name": name})
@@ -141,8 +134,8 @@ class MongoDBStorage(object):
         if r["n"] < 1:
             raise DoubleUnlockError(lock_name)
 
-    def load_units(self, state, limit=None):
-        cursor = self.db.units.find({"state": state})
+    def load_units(self, limit=None, **query):
+        cursor = self.db.units.find(query)
         if limit:
             cursor = cursor.limit(limit)
         units = []

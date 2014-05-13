@@ -31,7 +31,7 @@ class VCLWriter(object):
     def run(self):
         self.storage.lock(UNITS_LOCKER)
         try:
-            units = self.storage.load_units("creating", limit=self.max_items)
+            units = self.storage.load_units(state="creating", limit=self.max_items)
             up_units = []
             for unit in units:
                 if self._is_unit_up(unit):

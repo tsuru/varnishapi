@@ -57,7 +57,7 @@ class VCLWriterTestCase(unittest.TestCase):
         writer.bind_units = mock.Mock()
         writer.run()
         strg.lock.assert_called_with(vcl_writer.UNITS_LOCKER)
-        strg.load_units.assert_called_with("creating", limit=3)
+        strg.load_units.assert_called_with(state="creating", limit=3)
         strg.unlock.assert_called_with(vcl_writer.UNITS_LOCKER)
         writer.bind_units.assert_called_with([units[1]])
         strg.update_units.assert_called_with([units[1]], state="started")

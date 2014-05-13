@@ -263,7 +263,7 @@ class MongoDBStorageTestCase(unittest.TestCase):
         instance = storage.Instance(name="great", units=units)
         self.storage.store_instance(instance)
         self.addCleanup(self.storage.remove_instance, instance.name)
-        got_units = self.storage.load_units("creating")
+        got_units = self.storage.load_units(state="creating")
         self.assertEqual([u.to_dict() for u in units[:2]],
                          [u.to_dict() for u in got_units])
 
@@ -275,7 +275,7 @@ class MongoDBStorageTestCase(unittest.TestCase):
         instance = storage.Instance(name="great", units=units)
         self.storage.store_instance(instance)
         self.addCleanup(self.storage.remove_instance, instance.name)
-        got_units = self.storage.load_units("creating", limit=1)
+        got_units = self.storage.load_units(state="creating", limit=1)
         self.assertEqual([u.to_dict() for u in units[:1]],
                          [u.to_dict() for u in got_units])
 
@@ -290,7 +290,7 @@ class MongoDBStorageTestCase(unittest.TestCase):
         units[0].state = "started"
         units[1].state = "started"
         self.storage.update_units(units, state="started")
-        got_units = self.storage.load_units("started")
+        got_units = self.storage.load_units(state="started")
         self.assertEqual([u.to_dict() for u in units],
                          [u.to_dict() for u in got_units])
 
