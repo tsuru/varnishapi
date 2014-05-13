@@ -34,7 +34,9 @@ class VCLWriterTestCase(unittest.TestCase):
         writer.stop()
         t.join()
         fake_run.assert_called()
-        strg.init_vcl_locker.assert_called_once()
+        expected_calls = [mock.call(vcl_writer.UNITS_LOCKER),
+                          mock.call(vcl_writer.BINDS_LOCKER)]
+        self.assertEqual(expected_calls, strg.init_locker.call_args_list)
 
     def test_stop(self):
         manager = mock.Mock(storage=None)
@@ -54,10 +56,11 @@ class VCLWriterTestCase(unittest.TestCase):
         writer._is_unit_up = lambda unit: unit == units[1]
         writer.bind_units = mock.Mock()
         writer.run()
-        strg.lock_vcl_writer.assert_called_once()
+        strg.lock.assert_called_with(vcl_writer.UNITS_LOCKER)
         strg.load_units.assert_called_with("creating", limit=3)
-        strg.unlock_vcl_writer.assert_called_once()
+        strg.unlock.assert_called_with(vcl_writer.UNITS_LOCKER)
         writer.bind_units.assert_called_with([units[1]])
+        strg.update_units.assert_called_with([units[1]], state="started")
 
     def test_bind_units(self):
         instance1 = storage.Instance(name="myinstance")
@@ -84,7 +87,6 @@ class VCLWriterTestCase(unittest.TestCase):
                           mock.call("instance2-1.cloud.tsuru.io", "abc456",
                                     "myapp.cloud.tsuru.io")]
         self.assertEqual(expected_calls, manager.write_vcl.call_args_list)
-        strg.update_units.assert_called_with(units, state="started")
 
     @mock.patch("telnetlib.Telnet")
     def test_is_unit_up_up(self, Telnet):

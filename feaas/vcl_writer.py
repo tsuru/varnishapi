@@ -5,6 +5,9 @@
 import telnetlib
 import time
 
+UNITS_LOCKER = "units"
+BINDS_LOCKER = "binds"
+
 
 class VCLWriter(object):
 
@@ -16,7 +19,8 @@ class VCLWriter(object):
 
     def loop(self):
         self.running = True
-        self.storage.init_vcl_locker()
+        self.storage.init_locker(UNITS_LOCKER)
+        self.storage.init_locker(BINDS_LOCKER)
         while self.running:
             self.run()
             time.sleep(self.interval)
@@ -25,7 +29,7 @@ class VCLWriter(object):
         self.running = False
 
     def run(self):
-        self.storage.lock_vcl_writer()
+        self.storage.lock(UNITS_LOCKER)
         try:
             units = self.storage.load_units("creating", limit=self.max_items)
             up_units = []
@@ -34,8 +38,9 @@ class VCLWriter(object):
                     up_units.append(unit)
             if up_units:
                 self.bind_units(up_units)
+                self.storage.update_units(up_units, state="started")
         finally:
-            self.storage.unlock_vcl_writer()
+            self.storage.unlock(UNITS_LOCKER)
 
     def bind_units(self, units):
         binds_dict = {}
@@ -46,7 +51,6 @@ class VCLWriter(object):
             binds = binds_dict[instance_name]
             for bind in binds:
                 self.manager.write_vcl(unit.dns_name, unit.secret, bind.app_host)
-        self.storage.update_units(units, state="started")
 
     def _is_unit_up(self, unit):
         try:
