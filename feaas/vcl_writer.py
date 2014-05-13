@@ -3,6 +3,7 @@
 # license that can be found in the LICENSE file.
 
 import telnetlib
+import threading
 import time
 
 from feaas import storage
@@ -12,6 +13,14 @@ BINDS_LOCKER = "binds"
 
 
 class VCLWriter(object):
+    """
+    VCLWriter provides a method that keeps it running forever doing two things:
+
+        - whenever a new unit is added to an instance, bind this unit to all
+          applications that are already bound to this unit
+        - whenever a new bind is made, connect all started units to the
+          application that is being created
+    """
 
     def __init__(self, manager, interval=10, max_items=None):
         self.manager = manager
@@ -32,6 +41,14 @@ class VCLWriter(object):
         self.running = False
 
     def run(self):
+        t1 = threading.Thread(target=self.run_units)
+        t1.start()
+        t2 = threading.Thread(target=self.run_binds)
+        t2.start()
+        t1.join()
+        t2.join()
+
+    def run_units(self):
         self.locker.lock(UNITS_LOCKER)
         try:
             units = self.storage.retrieve_units(state="creating", limit=self.max_items)
@@ -50,7 +67,8 @@ class VCLWriter(object):
         for unit in units:
             iname = unit.instance.name
             if iname not in binds_dict:
-                binds_dict[iname] = self.storage.retrieve_binds(instance_name=iname)
+                binds_dict[iname] = self.storage.retrieve_binds(instance_name=iname,
+                                                                state="created")
             binds = binds_dict[iname]
             for bind in binds:
                 self.manager.write_vcl(unit.dns_name, unit.secret, bind.app_host)
@@ -62,3 +80,17 @@ class VCLWriter(object):
             return True
         except:
             return False
+
+    def run_binds(self):
+        self.locker.lock(BINDS_LOCKER)
+        try:
+            binds = self.storage.retrieve_binds(state="creating", limit=self.max_items)
+            instance_names = [b.instance.name for b in binds]
+            units = self.storage.retrieve_units(state="started",
+                                                instance_name={"$in": instance_names})
+            for bind in binds:
+                for unit in units:
+                    self.manager.write_vcl(unit.dns_name, unit.secret, bind.app_host)
+                self.storage.update_bind(bind, state="created")
+        finally:
+            self.locker.unlock(BINDS_LOCKER)

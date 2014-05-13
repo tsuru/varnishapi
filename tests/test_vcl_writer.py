@@ -34,7 +34,7 @@ class VCLWriterTestCase(unittest.TestCase):
         time.sleep(1)
         writer.stop()
         t.join()
-        fake_run.assert_called()
+        fake_run.assert_called_once()
         expected_calls = [mock.call(vcl_writer.UNITS_LOCKER),
                           mock.call(vcl_writer.BINDS_LOCKER)]
         self.assertEqual(expected_calls,
@@ -48,6 +48,15 @@ class VCLWriterTestCase(unittest.TestCase):
         self.assertFalse(writer.running)
 
     def test_run(self):
+        manager = mock.Mock(storage=mock.Mock())
+        writer = vcl_writer.VCLWriter(manager)
+        writer.run_units = mock.Mock()
+        writer.run_binds = mock.Mock()
+        writer.run()
+        writer.run_units.assert_called_once()
+        writer.run_binds.assert_called_once()
+
+    def test_run_units(self):
         units = [storage.Unit(dns_name="instance1.cloud.tsuru.io", id="i-0800"),
                  storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801"),
                  storage.Unit(dns_name="instance3.cloud.tsuru.io", id="i-0802")]
@@ -58,7 +67,7 @@ class VCLWriterTestCase(unittest.TestCase):
         writer._is_unit_up = lambda unit: unit == units[1]
         writer.bind_units = mock.Mock()
         writer.locker = mock.Mock()
-        writer.run()
+        writer.run_units()
         writer.locker.lock.assert_called_with(vcl_writer.UNITS_LOCKER)
         strg.retrieve_units.assert_called_with(state="creating", limit=3)
         writer.locker.unlock.assert_called_with(vcl_writer.UNITS_LOCKER)
@@ -81,8 +90,8 @@ class VCLWriterTestCase(unittest.TestCase):
         manager = mock.Mock(storage=strg)
         writer = vcl_writer.VCLWriter(manager, max_items=3)
         writer.bind_units(units)
-        expected_calls = [mock.call(instance_name="myinstance"),
-                          mock.call(instance_name="yourinstance")]
+        expected_calls = [mock.call(instance_name="myinstance", state="created"),
+                          mock.call(instance_name="yourinstance", state="created")]
         self.assertEqual(expected_calls, strg.retrieve_binds.call_args_list)
         expected_calls = [mock.call("instance1-1.cloud.tsuru.io", "abc123",
                                     "myapp.cloud.tsuru.io"),
@@ -111,3 +120,33 @@ class VCLWriterTestCase(unittest.TestCase):
         writer = vcl_writer.VCLWriter(manager, max_items=3)
         self.assertFalse(writer._is_unit_up(unit))
         Telnet.assert_called_with(unit.dns_name, "6082", timeout=3)
+
+    def test_run_binds(self):
+        units = [storage.Unit(id="i-0800", dns_name="unit1.cloud.tsuru.io",
+                              secret="abc123", state="started"),
+                 storage.Unit(id="i-8001", dns_name="unit2.cloud.tsuru.io",
+                              secret="abc321", state="started")]
+        instance1 = storage.Instance(name="wat", units=units)
+        instance2 = storage.Instance(name="wet", units=units)
+        binds = [storage.Bind(instance=instance1, app_host="cool", state="creating"),
+                 storage.Bind(instance=instance2, app_host="bool", state="creating")]
+        strg = mock.Mock()
+        strg.retrieve_units.return_value = units
+        strg.retrieve_binds.return_value = binds
+        manager = mock.Mock(storage=strg)
+        writer = vcl_writer.VCLWriter(manager, max_items=3)
+        writer.locker = mock.Mock()
+        writer.run_binds()
+        writer.locker.lock.assert_called_with(vcl_writer.BINDS_LOCKER)
+        writer.locker.unlock.assert_called_with(vcl_writer.BINDS_LOCKER)
+        strg.retrieve_units.assert_called_once_with(state="started",
+                                                    instance_name={"$in": ["wat", "wet"]})
+        strg.retrieve_binds.assert_called_once_with(state="creating", limit=3)
+        expected_write_vcl_calls = [mock.call("unit1.cloud.tsuru.io", "abc123", "cool"),
+                                    mock.call("unit2.cloud.tsuru.io", "abc321", "cool"),
+                                    mock.call("unit1.cloud.tsuru.io", "abc123", "bool"),
+                                    mock.call("unit2.cloud.tsuru.io", "abc321", "bool")]
+        self.assertEqual(expected_write_vcl_calls, manager.write_vcl.call_args_list)
+        expected_update_bind_calls = [mock.call(binds[0], state="created"),
+                                      mock.call(binds[1], state="created")]
+        self.assertEqual(expected_update_bind_calls, strg.update_bind.call_args_list)
