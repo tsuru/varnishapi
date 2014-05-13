@@ -122,24 +122,24 @@ class MongoDBStorage(object):
         self.db.binds.remove({"app_host": bind.app_host,
                               "instance_name": bind.instance.name})
 
-    def init_vcl_locker(self):
+    def init_locker(self, lock_name):
         try:
-            self.db.vcl_lock.insert({"_id": "1", "state": 0})
+            self.db.vcl_lock.insert({"_id": lock_name, "state": 0})
         except pymongo.errors.DuplicateKeyError:
             pass
 
-    def lock_vcl_writer(self):
+    def lock(self, lock_name):
         n = 0
         while n < 1:
-            r = self.db.vcl_lock.update({"_id": "1", "state": 0},
-                                        {"_id": "1", "state": 1})
+            r = self.db.vcl_lock.update({"_id": lock_name, "state": 0},
+                                        {"_id": lock_name, "state": 1})
             n = r["n"]
 
-    def unlock_vcl_writer(self):
-        r = self.db.vcl_lock.update({"_id": "1", "state": 1},
-                                    {"_id": "1", "state": 0})
+    def unlock(self, lock_name):
+        r = self.db.vcl_lock.update({"_id": lock_name, "state": 1},
+                                    {"_id": lock_name, "state": 0})
         if r["n"] < 1:
-            raise DoubleUnlockError()
+            raise DoubleUnlockError(lock_name)
 
     def load_units(self, state, limit=None):
         cursor = self.db.units.find({"state": state})

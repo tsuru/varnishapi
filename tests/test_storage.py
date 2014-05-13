@@ -73,7 +73,6 @@ class MongoDBStorageTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.client = pymongo.MongoClient('localhost', 27017)
-        cls.client.feaas_test.vcl_lock.insert({"_id": "1", "state": 0})
 
     @classmethod
     def tearDownClass(cls):
@@ -197,59 +196,64 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.storage.remove_bind(bind)
         self.assertEqual([], self.storage.retrieve_binds("years"))
 
-    def test_init_vcl_locker(self):
-        self.client.feaas_test.vcl_lock.remove({"_id": "1"})
-        self.storage.init_vcl_locker()
+    def test_init_locker(self):
+        self.storage.init_locker("test_init")
+        self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_init"})
         lock = self.client.feaas_test.vcl_lock.find_one()
-        self.assertEqual("1", lock["_id"])
+        self.assertEqual("test_init", lock["_id"])
         self.assertEqual(0, lock["state"])
 
-    def test_init_vcl_locker_duplicate(self):
-        self.client.feaas_test.vcl_lock.remove({"_id": "1"})
-        self.storage.init_vcl_locker()
-        self.storage.lock_vcl_writer()
-        self.addCleanup(self.storage.unlock_vcl_writer)
-        self.storage.init_vcl_locker()
+    def test_init_locker_duplicate(self):
+        self.storage.init_locker("test_init")
+        self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_init"})
+        self.storage.lock("test_init")
+        self.storage.init_locker("test_init")
         lock = self.client.feaas_test.vcl_lock.find_one()
-        self.assertEqual("1", lock["_id"])
+        self.assertEqual("test_init", lock["_id"])
         self.assertEqual(1, lock["state"])
 
-    def test_lock_vcl_writer(self):
-        self.storage.lock_vcl_writer()
-        self.addCleanup(self.storage.unlock_vcl_writer)
+    def test_lock(self):
+        self.storage.init_locker("test_lock")
+        self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_lock"})
+        self.storage.lock("test_lock")
         lock = self.client.feaas_test.vcl_lock.find_one()
-        self.assertEqual("1", lock["_id"])
+        self.assertEqual("test_lock", lock["_id"])
         self.assertEqual(1, lock["state"])
-        self.storage.unlock_vcl_writer()
-        self.storage.lock_vcl_writer()
+        self.storage.unlock("test_lock")
+        self.storage.lock("test_lock")
         lock = self.client.feaas_test.vcl_lock.find_one()
-        self.assertEqual("1", lock["_id"])
+        self.assertEqual("test_lock", lock["_id"])
         self.assertEqual(1, lock["state"])
 
-    def test_lock_vcl_writer_double_lock(self):
-        self.storage.lock_vcl_writer()
-        self.addCleanup(self.storage.unlock_vcl_writer)
-        t = threading.Thread(target=self.storage.lock_vcl_writer)
+    def test_double_lock(self):
+        self.storage.init_locker("test_lock")
+        self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_lock"})
+        self.storage.lock("test_lock")
+        t = threading.Thread(target=self.storage.lock, args=("test_lock",))
         t.start()
         time.sleep(.1)
-        self.storage.unlock_vcl_writer()
+        self.storage.unlock("test_lock")
         t.join()
         lock = self.client.feaas_test.vcl_lock.find_one()
-        self.assertEqual("1", lock["_id"])
+        self.assertEqual("test_lock", lock["_id"])
         self.assertEqual(1, lock["state"])
 
-    def test_unlock_vcl_writer(self):
-        self.storage.lock_vcl_writer()
-        self.storage.unlock_vcl_writer()
+    def test_unlock(self):
+        self.storage.init_locker("test_unlock")
+        self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_unlock"})
+        self.storage.lock("test_unlock")
+        self.storage.unlock("test_unlock")
         lock = self.client.feaas_test.vcl_lock.find_one()
-        self.assertEqual("1", lock["_id"])
+        self.assertEqual("test_unlock", lock["_id"])
         self.assertEqual(0, lock["state"])
 
-    def test_unlock_vcl_writer_double(self):
-        self.storage.lock_vcl_writer()
-        self.storage.unlock_vcl_writer()
+    def test_double_unlock(self):
+        self.storage.init_locker("test_unlock")
+        self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_unlock"})
+        self.storage.lock("test_unlock")
+        self.storage.unlock("test_unlock")
         with self.assertRaises(storage.DoubleUnlockError):
-            self.storage.unlock_vcl_writer()
+            self.storage.unlock("test_unlock")
 
     def test_load_units(self):
         units = [storage.Unit(dns_name="instance1.cloud.tsuru.io", id="i-0800"),
