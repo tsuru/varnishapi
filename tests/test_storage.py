@@ -186,6 +186,19 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.assertEqual([bind1.to_dict(), bind2.to_dict()], binds)
 
     @freezegun.freeze_time("2014-02-16 12:00:01")
+    def test_retrieve_binds_limit(self):
+        instance = storage.Instance(name="years")
+        bind1 = storage.Bind(app_host="something.where.com", instance=instance)
+        self.storage.store_bind(bind1)
+        bind2 = storage.Bind(app_host="belong.where.com", instance=instance)
+        self.storage.store_bind(bind2)
+        self.addCleanup(self.client.feaas_test.binds.remove,
+                        {"instance_name": "years"})
+        binds = self.storage.retrieve_binds(instance_name="years", limit=1)
+        binds = [b.to_dict() for b in binds]
+        self.assertEqual([bind1.to_dict()], binds)
+
+    @freezegun.freeze_time("2014-02-16 12:00:01")
     def test_retrieve_binds_query(self):
         instance = storage.Instance(name="years")
         bind1 = storage.Bind(app_host="something.where.com", instance=instance)
