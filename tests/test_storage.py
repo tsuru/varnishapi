@@ -63,7 +63,8 @@ class BindTestCase(unittest.TestCase):
         bind = storage.Bind("wat.g1.cloud.tsuru.io", instance)
         expected = {"app_host": "wat.g1.cloud.tsuru.io",
                     "instance_name": "myinstance",
-                    "created_at": bind.created_at}
+                    "created_at": bind.created_at,
+                    "state": bind.state}
         self.assertEqual(expected, bind.to_dict())
 
 

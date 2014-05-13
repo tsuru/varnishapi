@@ -55,14 +55,16 @@ class Unit(object):
 
 class Bind(object):
 
-    def __init__(self, app_host, instance, created_at=None):
+    def __init__(self, app_host, instance, created_at=None,
+                 state="creating"):
         self.app_host = app_host
         self.instance = instance
+        self.state = state
         self.created_at = created_at or datetime.datetime.utcnow()
 
     def to_dict(self):
         return {"app_host": self.app_host, "instance_name": self.instance.name,
-                "created_at": self.created_at}
+                "created_at": self.created_at, "state": self.state}
 
 
 class MongoDBStorage(object):
