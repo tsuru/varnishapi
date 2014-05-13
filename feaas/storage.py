@@ -120,7 +120,8 @@ class MongoDBStorage(object):
             instance = Instance(name=item["instance_name"])
             binds.append(Bind(app_host=item["app_host"],
                               instance=instance,
-                              created_at=item["created_at"]))
+                              created_at=item["created_at"],
+                              state=item["state"]))
         return binds
 
     def remove_bind(self, bind):
@@ -131,6 +132,9 @@ class MongoDBStorage(object):
         ids = [u.id for u in units]
         self.db.units.update({"id": {"$in": ids}}, {"$set": changes},
                              multi=True)
+
+    def update_bind(self, bind, **changes):
+        self.db.binds.update(bind.to_dict(), {"$set": changes}, multi=True)
 
 
 class MultiLocker(object):

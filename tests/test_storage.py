@@ -259,6 +259,15 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.assertEqual([u.to_dict() for u in units],
                          [u.to_dict() for u in got_units])
 
+    def test_update_bind(self):
+        instance = storage.Instance(name="great")
+        bind = storage.Bind("wat.g1.cloud.tsuru.io", instance)
+        self.storage.store_bind(bind)
+        self.addCleanup(self.storage.remove_bind, bind)
+        self.storage.update_bind(bind, state="created")
+        bind = self.storage.retrieve_binds(instance_name="great")[0]
+        self.assertEqual("created", bind.state)
+
     def assert_units(self, expected_units, instance_name):
         cursor = self.client.feaas_test.units.find({"instance_name": instance_name})
         units = []
