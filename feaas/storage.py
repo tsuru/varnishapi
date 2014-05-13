@@ -31,9 +31,11 @@ class Instance(object):
         return {"name": self.name}
 
     def add_unit(self, unit):
+        unit.instance = self
         self.units.append(unit)
 
     def remove_unit(self, unit):
+        unit.instance = self
         self.units.remove(unit)
 
 

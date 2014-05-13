@@ -30,6 +30,8 @@ class InstanceTestCase(unittest.TestCase):
         instance.add_unit(unit1)
         instance.add_unit(unit2)
         self.assertEqual([unit1, unit2], instance.units)
+        self.assertEqual(instance, unit1.instance)
+        self.assertEqual(instance, unit2.instance)
 
     def test_remove_unit(self):
         unit1 = storage.Unit(dns_name="instance1.cloud.tsuru.io", id="i-0800")
