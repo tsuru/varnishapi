@@ -42,6 +42,17 @@ class TsuruPluginTestCase(unittest.TestCase):
         stdout.write.assert_called_with("Instance successfully scaled to 10 units\n")
 
     @mock.patch("urllib.urlopen")
+    @mock.patch("sys.stdout")
+    def test_scale_singular(self, stdout, urlopen):
+        result = mock.Mock()
+        result.getcode.return_value = 201
+        urlopen.return_value = result
+        plugin.scale(["-i", "myinstance", "-n", "1"])
+        urlopen.assert_called_with(plugin.API_URL + "/resources/myinstance/scale",
+                                   data="quantity=1")
+        stdout.write.assert_called_with("Instance successfully scaled to 1 unit\n")
+
+    @mock.patch("urllib.urlopen")
     @mock.patch("sys.stderr")
     def test_scale_failure(self, stderr, urlopen):
         result = mock.Mock()

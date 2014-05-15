@@ -29,8 +29,10 @@ def scale(args):
     result = urllib.urlopen(get_url("/resources/{}/scale".format(instance)),
                             data="quantity={}".format(quantity))
     if result.getcode() == 201:
-        msg = "Instance successfully scaled to {} units\n".format(quantity)
-        sys.stdout.write(msg)
+        msg = "Instance successfully scaled to {} unit".format(quantity)
+        if quantity > 1:
+            msg += "s"
+        sys.stdout.write(msg + "\n")
     else:
         msg = result.read().rstrip("\n")
         sys.stderr.write("ERROR: " + msg + "\n")
