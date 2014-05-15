@@ -2,11 +2,12 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+import inspect
 import json
 import os
 import unittest
 
-from feaas import api, storage
+from feaas import api, plugin, storage
 from feaas.managers import ec2
 from . import managers
 
@@ -148,6 +149,18 @@ class APITestCase(unittest.TestCase):
                              data={"quantity": "2"})
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
+
+    def test_plugin(self):
+        os.environ["API_URL"] = "http://feaas-api.cloud.tsuru.io"
+
+        def clean():
+            del os.environ["API_URL"]
+        self.addCleanup(clean)
+        expected = inspect.getsource(plugin).replace("{{ API_URL }}",
+                                                     "http://feaas-api.cloud.tsuru.io")
+        resp = self.api.get("/plugin")
+        self.assertEqual(200, resp.status_code)
+        self.assertEqual(expected, resp.data)
 
 
 class ManagerTestCase(unittest.TestCase):

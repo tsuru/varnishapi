@@ -2,12 +2,13 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+import inspect
 import json
 import os
 
 from flask import Flask, Response, request
 
-from . import storage
+from . import plugin, storage
 from .managers import ec2
 
 api = Flask(__name__)
@@ -99,6 +100,13 @@ def scale_instance(name):
     except storage.InstanceNotFoundError:
         return "Instance not found", 404
     return "", 201
+
+
+@api.route("/plugin", methods=["GET"])
+def get_plugin():
+    source = inspect.getsource(plugin)
+    source = source.replace("{{ API_URL }}", os.environ.get("API_URL"))
+    return source, 200
 
 
 def register_manager(name, obj, override=False):
