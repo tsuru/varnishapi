@@ -34,7 +34,7 @@ class TsuruPluginTestCase(unittest.TestCase):
     @mock.patch("sys.stdout")
     def test_scale(self, stdout, urlopen):
         result = mock.Mock()
-        result.getcode.return_value = 200
+        result.getcode.return_value = 201
         urlopen.return_value = result
         plugin.scale(["-i", "myinstance", "-n", "10"])
         urlopen.assert_called_with(plugin.API_URL + "/resources/myinstance/scale",
