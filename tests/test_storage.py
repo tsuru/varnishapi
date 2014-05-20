@@ -19,8 +19,8 @@ class InstanceTestCase(unittest.TestCase):
             self.assertEqual(instance, unit.instance)
 
     def test_to_dict(self):
-        instance = storage.Instance(name="myinstance")
-        expected = {"name": "myinstance"}
+        instance = storage.Instance(name="myinstance", state="created")
+        expected = {"name": "myinstance", "state": "created"}
         self.assertEqual(expected, instance.to_dict())
 
     def test_add_unit(self):
@@ -86,7 +86,7 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.storage.store_instance(instance)
         self.addCleanup(self.client.feaas_test.instances.remove, {"name": "secret"})
         instance = self.client.feaas_test.instances.find_one({"name": "secret"})
-        expected = {"name": "secret", "_id": instance["_id"]}
+        expected = {"name": "secret", "_id": instance["_id"], "state": "creating"}
         self.assertEqual(expected, instance)
 
     def test_store_instance_with_units(self):
@@ -96,7 +96,7 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.addCleanup(self.client.feaas_test.instances.remove, {"name": "secret"})
         self.addCleanup(self.client.feaas_test.units.remove, {"instance_name": "secret"})
         instance = self.client.feaas_test.instances.find_one({"name": "secret"})
-        expected = {"name": "secret", "_id": instance["_id"]}
+        expected = {"name": "secret", "_id": instance["_id"], "state": "creating"}
         self.assertEqual(expected, instance)
         unit = self.client.feaas_test.units.find_one({"id": "i-0800",
                                                       "instance_name": "secret"})

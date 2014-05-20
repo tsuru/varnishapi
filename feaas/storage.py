@@ -21,14 +21,15 @@ class DoubleUnlockError(Exception):
 
 class Instance(object):
 
-    def __init__(self, name=None, units=None):
+    def __init__(self, name=None, state="creating", units=None):
         self.name = name
+        self.state = state
         self.units = units or []
         for unit in self.units:
             unit.instance = self
 
     def to_dict(self):
-        return {"name": self.name}
+        return {"name": self.name, "state": self.state}
 
     def add_unit(self, unit):
         unit.instance = self
