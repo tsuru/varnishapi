@@ -117,8 +117,25 @@ class EC2ManagerTestCase(unittest.TestCase):
         with self.assertRaises(api_storage.InstanceAlreadyExistsError):
             manager.add_instance("pull")
 
+    def test_create_instance(self):
+        instance = api_storage.Instance(name="myapp")
+        storage = mock.Mock()
+        storage.retrieve_instance.return_value = instance
+        manager = ec2.EC2Manager(storage)
+        manager._scale = mock.Mock()
+        created_instance = manager.create_instance("myapp")
+        self.assertEqual(instance, created_instance)
+        manager._scale.assert_called_with(instance, 1)
+
+    def test_create_instance_not_found(self):
+        storage = mock.Mock()
+        storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
+        manager = ec2.EC2Manager(storage)
+        with self.assertRaises(api_storage.InstanceNotFoundError):
+            manager.create_instance("myapp")
+
     @mock.patch("uuid.uuid4")
-    def test_run_unit_packages(self, uuid4):
+    def test_create_instance_ec2(self, uuid4):
         uuid4.return_value = u"abacaxi"
         os.environ["API_PACKAGES"] = "varnish vim-nox"
 
@@ -129,9 +146,7 @@ class EC2ManagerTestCase(unittest.TestCase):
         conn.run_instances.return_value = self.get_fake_reservation(
             instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
         )
-        storage = mock.Mock()
-        storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
-        manager = ec2.EC2Manager(storage)
+        manager = ec2.EC2Manager(None)
         manager._connection = conn
         manager._run_unit()
         user_data = """apt-get update
@@ -148,7 +163,6 @@ chmod +x /etc/cron.hourly/dump_vcls
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
                                                    user_data=user_data)
-        storage.store_instance.assert_called_once()
 
     def test_remove_instance(self):
         conn = mock.Mock()

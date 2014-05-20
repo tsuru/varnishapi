@@ -63,6 +63,11 @@ class EC2Manager(object):
         except storage.InstanceNotFoundError:
             pass
 
+    def create_instance(self, name):
+        instance = self.storage.retrieve_instance(name)
+        self._scale(instance, 1)
+        return instance
+
     def _run_unit(self):
         ami_id = os.environ.get("AMI_ID")
         subnet_id = os.environ.get("SUBNET_ID")
@@ -155,6 +160,9 @@ class EC2Manager(object):
         if quantity < 1:
             raise ValueError("quantity must be a positive integer")
         instance = self.storage.retrieve_instance(name)
+        return self._scale(instance, quantity)
+
+    def _scale(self, instance, quantity):
         new_units = quantity - len(instance.units)
         if new_units == 0:
             raise ValueError("instance already have %d units" % quantity)
