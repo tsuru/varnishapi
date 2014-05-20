@@ -35,7 +35,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual([], self.manager.instances)
 
     def test_remove_instance(self):
-        self.manager.add_instance("someapp")
+        self.manager.new_instance("someapp")
         resp = self.api.delete("/resources/someapp")
         self.assertEqual(200, resp.status_code)
         self.assertEqual("", resp.data)
@@ -48,7 +48,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual([], self.manager.instances)
 
     def test_bind(self):
-        self.manager.add_instance("someapp")
+        self.manager.new_instance("someapp")
         resp = self.api.post("/resources/someapp",
                              data={"app-host": "someapp.cloud.tsuru.io"})
         self.assertEqual(201, resp.status_code)
@@ -70,7 +70,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual("Instance not found", resp.data)
 
     def test_unbind(self):
-        self.manager.add_instance("someapp")
+        self.manager.new_instance("someapp")
         self.manager.bind("someapp", "someapp.cloud.tsuru.io")
         resp = self.api.delete("/resources/someapp/hostname/someapp.cloud.tsuru.io")
         self.assertEqual(200, resp.status_code)
@@ -83,7 +83,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual("Instance not found", resp.data)
 
     def test_info(self):
-        self.manager.add_instance("someapp")
+        self.manager.new_instance("someapp")
         resp = self.api.get("/resources/someapp")
         self.assertEqual(200, resp.status_code)
         self.assertEqual("application/json", resp.mimetype)
@@ -96,17 +96,17 @@ class APITestCase(unittest.TestCase):
         self.assertEqual("Instance not found", resp.data)
 
     def test_status_running(self):
-        self.manager.add_instance("someapp", state="running")
+        self.manager.new_instance("someapp", state="running")
         resp = self.api.get("/resources/someapp/status")
         self.assertEqual(204, resp.status_code)
 
     def test_status_pending(self):
-        self.manager.add_instance("someapp", state="pending")
+        self.manager.new_instance("someapp", state="pending")
         resp = self.api.get("/resources/someapp/status")
         self.assertEqual(202, resp.status_code)
 
     def test_status_error(self):
-        self.manager.add_instance("someapp", state="error")
+        self.manager.new_instance("someapp", state="error")
         resp = self.api.get("/resources/someapp/status")
         self.assertEqual(500, resp.status_code)
 
@@ -116,7 +116,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual("Instance not found", resp.data)
 
     def test_scale_instance(self):
-        self.manager.add_instance("someapp")
+        self.manager.new_instance("someapp")
         resp = self.api.post("/resources/someapp/scale",
                              data={"quantity": "3"})
         self.assertEqual(201, resp.status_code)
@@ -124,21 +124,21 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(3, instance.units)
 
     def test_scale_instance_invalid_quantity(self):
-        self.manager.add_instance("someapp")
+        self.manager.new_instance("someapp")
         resp = self.api.post("/resources/someapp/scale",
                              data={"quantity": "chico"})
         self.assertEqual(400, resp.status_code)
         self.assertEqual("invalid quantity: chico", resp.data)
 
     def test_scale_instance_negative_quantity(self):
-        self.manager.add_instance("someapp")
+        self.manager.new_instance("someapp")
         resp = self.api.post("/resources/someapp/scale",
                              data={"quantity": "-2"})
         self.assertEqual(400, resp.status_code)
         self.assertEqual("invalid quantity: -2", resp.data)
 
     def test_scale_instance_missing_quantity(self):
-        self.manager.add_instance("someapp")
+        self.manager.new_instance("someapp")
         resp = self.api.post("/resources/someapp/scale",
                              data={"quality": "-2"})
         self.assertEqual(400, resp.status_code)

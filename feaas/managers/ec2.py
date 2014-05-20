@@ -50,7 +50,7 @@ class EC2Manager(object):
                                  is_secure=scheme == "https",
                                  path=path, region=region)
 
-    def add_instance(self, name):
+    def new_instance(self, name):
         self._check_duplicate(name)
         instance = storage.Instance(name)
         self.storage.store_instance(instance)

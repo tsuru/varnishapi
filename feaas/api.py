@@ -25,7 +25,7 @@ def create_instance():
     if not name:
         return "name is required", 400
     manager = get_manager()
-    manager.add_instance(name)
+    manager.new_instance(name)
     return "", 201
 
 

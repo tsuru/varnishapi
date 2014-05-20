@@ -103,11 +103,11 @@ class EC2ManagerTestCase(unittest.TestCase):
                                     region=m)
         region_mock.assert_called_with(name="custom", endpoint="amazonaws.com")
 
-    def test_add_instance(self):
+    def test_new_instance(self):
         storage = mock.Mock()
         storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
-        instance = manager.add_instance("someapp")
+        instance = manager.new_instance("someapp")
         storage.store_instance.assert_called_with(instance)
 
     def test_add_duplicate_instance(self):
@@ -115,7 +115,7 @@ class EC2ManagerTestCase(unittest.TestCase):
         storage.retrieve_instance.return_value = "instance"
         manager = ec2.EC2Manager(storage)
         with self.assertRaises(api_storage.InstanceAlreadyExistsError):
-            manager.add_instance("pull")
+            manager.new_instance("pull")
 
     def test_create_instance(self):
         instance = api_storage.Instance(name="myapp")
