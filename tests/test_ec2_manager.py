@@ -104,18 +104,10 @@ class EC2ManagerTestCase(unittest.TestCase):
         region_mock.assert_called_with(name="custom", endpoint="amazonaws.com")
 
     def test_add_instance(self):
-        conn = mock.Mock()
-        conn.run_instances.return_value = self.get_fake_reservation(
-            instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
-        )
         storage = mock.Mock()
         storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
-        manager._connection = conn
         instance = manager.add_instance("someapp")
-        conn.run_instances.assert_called_once_with(image_id=self.ami_id,
-                                                   subnet_id=self.subnet_id,
-                                                   user_data=None)
         storage.store_instance.assert_called_with(instance)
 
     def test_add_duplicate_instance(self):
@@ -125,20 +117,8 @@ class EC2ManagerTestCase(unittest.TestCase):
         with self.assertRaises(api_storage.InstanceAlreadyExistsError):
             manager.add_instance("pull")
 
-    @mock.patch("sys.stderr")
-    def test_add_instance_ec2_failure(self, stderr_mock):
-        conn = mock.Mock()
-        conn.run_instances.side_effect = ValueError("Something went wrong")
-        storage = mock.Mock()
-        storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
-        manager = ec2.EC2Manager(storage)
-        manager._connection = conn
-        manager.add_instance("someapp")
-        msg = "[ERROR] Failed to create EC2 instance: Something went wrong"
-        stderr_mock.write.assert_called_with(msg)
-
     @mock.patch("uuid.uuid4")
-    def test_add_instance_packages(self, uuid4):
+    def test_run_unit_packages(self, uuid4):
         uuid4.return_value = u"abacaxi"
         os.environ["API_PACKAGES"] = "varnish vim-nox"
 
@@ -153,7 +133,7 @@ class EC2ManagerTestCase(unittest.TestCase):
         storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
-        manager.add_instance("someapp")
+        manager._run_unit()
         user_data = """apt-get update
 apt-get install -y varnish vim-nox
 sed -i -e 's/-T localhost:6082/-T :6082/' /etc/default/varnish

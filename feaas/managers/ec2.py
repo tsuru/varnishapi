@@ -52,13 +52,8 @@ class EC2Manager(object):
 
     def add_instance(self, name):
         self._check_duplicate(name)
-        instance = None
-        try:
-            instance = storage.Instance(name, units=[self._run_unit()])
-            self.storage.store_instance(instance)
-        except Exception as e:
-            sys.stderr.write("[ERROR] Failed to create EC2 instance: %s" %
-                             " ".join(e.args))
+        instance = storage.Instance(name)
+        self.storage.store_instance(instance)
         return instance
 
     def _check_duplicate(self, name):
