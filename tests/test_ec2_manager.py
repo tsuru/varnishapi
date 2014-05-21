@@ -117,25 +117,25 @@ class EC2ManagerTestCase(unittest.TestCase):
         with self.assertRaises(api_storage.InstanceAlreadyExistsError):
             manager.new_instance("pull")
 
-    def test_create_instance(self):
+    def test_start_instance(self):
         instance = api_storage.Instance(name="myapp")
         storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         manager._scale = mock.Mock()
-        created_instance = manager.create_instance("myapp")
+        created_instance = manager.start_instance("myapp")
         self.assertEqual(instance, created_instance)
         manager._scale.assert_called_with(instance, 1)
 
-    def test_create_instance_not_found(self):
+    def test_start_instance_not_found(self):
         storage = mock.Mock()
         storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
         manager = ec2.EC2Manager(storage)
         with self.assertRaises(api_storage.InstanceNotFoundError):
-            manager.create_instance("myapp")
+            manager.start_instance("myapp")
 
     @mock.patch("uuid.uuid4")
-    def test_create_instance_ec2(self, uuid4):
+    def test_start_instance_ec2(self, uuid4):
         uuid4.return_value = u"abacaxi"
         os.environ["API_PACKAGES"] = "varnish vim-nox"
 

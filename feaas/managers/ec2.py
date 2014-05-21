@@ -63,7 +63,7 @@ class EC2Manager(object):
         except storage.InstanceNotFoundError:
             pass
 
-    def create_instance(self, name):
+    def start_instance(self, name):
         instance = self.storage.retrieve_instance(name=name)
         self._scale(instance, 1)
         return instance

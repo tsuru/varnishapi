@@ -20,7 +20,7 @@ managers = {
 
 
 @api.route("/resources", methods=["POST"])
-def create_instance():
+def start_instance():
     name = request.form.get("name")
     if not name:
         return "name is required", 400

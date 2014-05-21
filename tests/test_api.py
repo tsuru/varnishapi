@@ -23,12 +23,12 @@ class APITestCase(unittest.TestCase):
     def setUp(self):
         self.manager.reset()
 
-    def test_create_instance(self):
+    def test_start_instance(self):
         resp = self.api.post("/resources", data={"name": "someapp"})
         self.assertEqual(201, resp.status_code)
         self.assertEqual("someapp", self.manager.instances[0].name)
 
-    def test_create_instance_without_name(self):
+    def test_start_instance_without_name(self):
         resp = self.api.post("/resources", data={"names": "someapp"})
         self.assertEqual(400, resp.status_code)
         self.assertEqual("name is required", resp.data)
