@@ -4,15 +4,14 @@
 
 import telnetlib
 import threading
-import time
 
-from feaas import storage
+from feaas import runners, storage
 
 UNITS_LOCKER = "units"
 BINDS_LOCKER = "binds"
 
 
-class VCLWriter(object):
+class VCLWriter(runners.Base):
     """
     VCLWriter provides a method that keeps it running forever doing two things:
 
@@ -23,22 +22,11 @@ class VCLWriter(object):
     """
 
     def __init__(self, manager, interval=10, max_items=None):
-        self.manager = manager
-        self.storage = manager.storage
+        super(VCLWriter, self).__init__(manager, interval)
         self.locker = storage.MultiLocker(self.storage)
-        self.interval = interval
-        self.max_items = max_items
-
-    def loop(self):
-        self.running = True
         self.locker.init(UNITS_LOCKER)
         self.locker.init(BINDS_LOCKER)
-        while self.running:
-            self.run()
-            time.sleep(self.interval)
-
-    def stop(self):
-        self.running = False
+        self.max_items = max_items
 
     def run(self):
         t1 = threading.Thread(target=self.run_units)

@@ -8,7 +8,8 @@ import unittest
 
 import mock
 
-from feaas import instance_starter, storage
+from feaas import storage
+from feaas.runners import instance_starter
 
 
 class InstanceStarterTestCase(unittest.TestCase):

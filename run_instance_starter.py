@@ -4,7 +4,8 @@
 
 import argparse
 
-from feaas import api, instance_starter
+from feaas import api
+from feaas.runners import instance_starter
 
 
 def run(manager):
@@ -14,6 +15,7 @@ def run(manager):
                         default=10, type=int)
     args = parser.parse_args()
     starter = instance_starter.InstanceStarter(manager, args.interval)
+    starter.loop()
 
 if __name__ == "__main__":
     manager = api.get_manager()

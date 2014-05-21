@@ -2,29 +2,16 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-import time
-
-from feaas import storage
+from feaas import runners, storage
 
 
-class InstanceStarter(object):
+class InstanceStarter(runners.Base):
     lock_name = "instance_starter"
 
     def __init__(self, manager, interval=10):
-        self.manager = manager
-        self.storage = manager.storage
-        self.interval = interval
+        super(InstanceStarter, self).__init__(manager, interval)
         self.locker = storage.MultiLocker(self.storage)
-
-    def loop(self):
-        self.running = True
         self.locker.init(self.lock_name)
-        while self.running:
-            self.run()
-            time.sleep(self.interval)
-
-    def stop(self):
-        self.running = False
 
     def run(self):
         try:

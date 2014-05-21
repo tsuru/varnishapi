@@ -4,7 +4,8 @@
 
 import argparse
 
-from feaas import api, vcl_writer
+from feaas import api
+from feaas.runners import vcl_writer
 
 
 def run(manager):

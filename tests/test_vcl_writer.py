@@ -8,7 +8,8 @@ import unittest
 
 import mock
 
-from feaas import storage, vcl_writer
+from feaas import storage
+from feaas.runners import vcl_writer
 
 
 class VCLWriterTestCase(unittest.TestCase):
@@ -21,6 +22,10 @@ class VCLWriterTestCase(unittest.TestCase):
         self.assertEqual(strg, writer.storage)
         self.assertEqual(10, writer.interval)
         self.assertEqual(3, writer.max_items)
+        writer.locker.lock(vcl_writer.UNITS_LOCKER)
+        writer.locker.unlock(vcl_writer.UNITS_LOCKER)
+        writer.locker.lock(vcl_writer.BINDS_LOCKER)
+        writer.locker.unlock(vcl_writer.BINDS_LOCKER)
 
     def test_loop(self):
         strg = mock.Mock()
@@ -35,10 +40,6 @@ class VCLWriterTestCase(unittest.TestCase):
         writer.stop()
         t.join()
         fake_run.assert_called_once()
-        expected_calls = [mock.call(vcl_writer.UNITS_LOCKER),
-                          mock.call(vcl_writer.BINDS_LOCKER)]
-        self.assertEqual(expected_calls,
-                         writer.locker.init.call_args_list)
 
     def test_stop(self):
         manager = mock.Mock(storage=mock.Mock())
