@@ -58,13 +58,13 @@ class EC2Manager(object):
 
     def _check_duplicate(self, name):
         try:
-            self.storage.retrieve_instance(name)
+            self.storage.retrieve_instance(name=name)
             raise storage.InstanceAlreadyExistsError()
         except storage.InstanceNotFoundError:
             pass
 
     def create_instance(self, name):
-        instance = self.storage.retrieve_instance(name)
+        instance = self.storage.retrieve_instance(name=name)
         self._scale(instance, 1)
         return instance
 
@@ -145,12 +145,12 @@ class EC2Manager(object):
                              " ".join([str(arg) for arg in e.args]))
 
     def info(self, name):
-        instance = self.storage.retrieve_instance(name)
+        instance = self.storage.retrieve_instance(name=name)
         return [{"label": "Address",
                  "value": instance.units[0].dns_name}]
 
     def status(self, name):
-        instance = self.storage.retrieve_instance(name)
+        instance = self.storage.retrieve_instance(name=name)
         reservations = self.connection.get_all_instances(instance_ids=[instance.units[0].id])
         if len(reservations) < 1 or len(reservations[0].instances) < 1:
             raise storage.InstanceNotFoundError()
@@ -159,7 +159,7 @@ class EC2Manager(object):
     def scale_instance(self, name, quantity):
         if quantity < 1:
             raise ValueError("quantity must be a positive integer")
-        instance = self.storage.retrieve_instance(name)
+        instance = self.storage.retrieve_instance(name=name)
         return self._scale(instance, quantity)
 
     def _scale(self, instance, quantity):

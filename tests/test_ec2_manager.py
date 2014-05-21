@@ -267,7 +267,7 @@ chmod +x /etc/cron.hourly/dump_vcls
         manager = ec2.EC2Manager(storage)
         expected = [{"label": "Address", "value": "secret.cloud.tsuru.io"}]
         self.assertEqual(expected, manager.info("secret"))
-        storage.retrieve_instance.assert_called_with("secret")
+        storage.retrieve_instance.assert_called_with(name="secret")
 
     def test_info_multiple_units(self):
         units = [api_storage.Unit(dns_name="secret.cloud.tsuru.io",
@@ -280,7 +280,7 @@ chmod +x /etc/cron.hourly/dump_vcls
         manager = ec2.EC2Manager(storage)
         expected = [{"label": "Address", "value": "secret.cloud.tsuru.io"}]
         self.assertEqual(expected, manager.info("secret"))
-        storage.retrieve_instance.assert_called_with("secret")
+        storage.retrieve_instance.assert_called_with(name="secret")
 
     def test_info_instance_not_found(self):
         storage = mock.Mock()
@@ -401,7 +401,7 @@ chmod +x /etc/cron.hourly/dump_vcls
             manager.scale_instance("secret", 2)
         exc = cm.exception
         self.assertEqual(("instance already have 2 units",), exc.args)
-        storage.retrieve_instance.assert_called_with("secret")
+        storage.retrieve_instance.assert_called_with(name="secret")
 
     def test_scale_instance_negative_quantity(self):
         manager = ec2.EC2Manager(None)

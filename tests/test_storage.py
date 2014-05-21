@@ -126,14 +126,28 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.storage.store_instance(instance)
         self.addCleanup(self.client.feaas_test.instances.remove, {"name": instance.name})
         self.addCleanup(self.client.feaas_test.units.remove, {"instance_name": instance.name})
-        got_instance = self.storage.retrieve_instance("what")
+        got_instance = self.storage.retrieve_instance(name="what")
         self.assertEqual([u.to_dict() for u in units],
                          [u.to_dict() for u in got_instance.units])
         self.assertEqual(instance.to_dict(), got_instance.to_dict())
 
     def test_retrieve_instance_not_found(self):
         with self.assertRaises(storage.InstanceNotFoundError):
-            self.storage.retrieve_instance("secret")
+            self.storage.retrieve_instance(name="secret")
+
+    def test_retrieve_instance_by_state(self):
+        instance1 = storage.Instance(name="where", state="creating")
+        self.storage.store_instance(instance1)
+        self.addCleanup(self.client.feaas_test.instances.remove, {"name": instance1.name})
+        instance2 = storage.Instance(name="when", state="creating")
+        self.storage.store_instance(instance2)
+        self.addCleanup(self.client.feaas_test.instances.remove, {"name": instance2.name})
+        instance3 = storage.Instance(name="who", state="starting")
+        self.storage.store_instance(instance3)
+        self.addCleanup(self.client.feaas_test.instances.remove, {"name": instance3.name})
+        instance = self.storage.retrieve_instance(state="creating")
+        self.assertEqual(instance1.name, instance.name)
+        self.assertEqual(instance1.state, instance.state)
 
     def test_remove_instance(self):
         instance = storage.Instance(name="years")
