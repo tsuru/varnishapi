@@ -5,7 +5,7 @@
 import telnetlib
 import threading
 
-from feaas import runners, storage
+from feaas import runners
 
 UNITS_LOCKER = "units"
 BINDS_LOCKER = "binds"
@@ -23,9 +23,7 @@ class VCLWriter(runners.Base):
 
     def __init__(self, manager, interval=10, max_items=None):
         super(VCLWriter, self).__init__(manager, interval)
-        self.locker = storage.MultiLocker(self.storage)
-        self.locker.init(UNITS_LOCKER)
-        self.locker.init(BINDS_LOCKER)
+        self.init_locker(UNITS_LOCKER, BINDS_LOCKER)
         self.max_items = max_items
 
     def run(self):

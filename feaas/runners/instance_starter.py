@@ -10,8 +10,7 @@ class InstanceStarter(runners.Base):
 
     def __init__(self, manager, interval=10):
         super(InstanceStarter, self).__init__(manager, interval)
-        self.locker = storage.MultiLocker(self.storage)
-        self.locker.init(self.lock_name)
+        self.init_locker(self.lock_name)
 
     def run(self):
         try:
