@@ -147,19 +147,22 @@ class MultiLocker(object):
 
     def init(self, lock_name):
         try:
-            self.db.vcl_lock.insert({"_id": lock_name, "state": 0})
+            self.db.multi_locker.insert({"_id": lock_name, "state": 0})
         except pymongo.errors.DuplicateKeyError:
             pass
+
+    def destroy(self, lock_name):
+        self.db.multi_locker.remove({"_id": lock_name})
 
     def lock(self, lock_name):
         n = 0
         while n < 1:
-            r = self.db.vcl_lock.update({"_id": lock_name, "state": 0},
+            r = self.db.multi_locker.update({"_id": lock_name, "state": 0},
                                         {"_id": lock_name, "state": 1})
             n = r["n"]
 
     def unlock(self, lock_name):
-        r = self.db.vcl_lock.update({"_id": lock_name, "state": 1},
+        r = self.db.multi_locker.update({"_id": lock_name, "state": 1},
                                     {"_id": lock_name, "state": 0})
         if r["n"] < 1:
             raise DoubleUnlockError(lock_name)

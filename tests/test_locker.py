@@ -27,58 +27,70 @@ class MultiLockerTestCase(unittest.TestCase):
 
     def test_init(self):
         self.locker.init("test_init")
-        self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_init"})
-        lock = self.client.feaas_test.vcl_lock.find_one()
+        self.addCleanup(self.client.feaas_test.multi_locker.remove, {"_id": "test_init"})
+        lock = self.client.feaas_test.multi_locker.find_one()
         self.assertEqual("test_init", lock["_id"])
         self.assertEqual(0, lock["state"])
 
     def test_init_duplicate(self):
         self.locker.init("test_init")
-        self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_init"})
+        self.addCleanup(self.client.feaas_test.multi_locker.remove, {"_id": "test_init"})
         self.locker.lock("test_init")
         self.locker.init("test_init")
-        lock = self.client.feaas_test.vcl_lock.find_one()
+        lock = self.client.feaas_test.multi_locker.find_one()
         self.assertEqual("test_init", lock["_id"])
         self.assertEqual(1, lock["state"])
 
+    def test_destroy(self):
+        self.locker.init("test_destroy")
+        self.addCleanup(self.client.feaas_test.multi_locker.remove, {"_id": "test_destroy"})
+        self.locker.destroy("test_destroy")
+        lock = self.client.feaas_test.multi_locker.find_one()
+        self.assertIsNone(lock)
+
+    def test_destroy_unitialized(self):
+        self.locker.destroy("test_destroy")
+        lock = self.client.feaas_test.multi_locker.find_one()
+        self.assertIsNone(lock)
+
     def test_lock(self):
         self.locker.init("test_lock")
-        self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_lock"})
+        self.addCleanup(self.client.feaas_test.multi_locker.remove, {"_id": "test_lock"})
         self.locker.lock("test_lock")
-        lock = self.client.feaas_test.vcl_lock.find_one()
+        lock = self.client.feaas_test.multi_locker.find_one()
         self.assertEqual("test_lock", lock["_id"])
         self.assertEqual(1, lock["state"])
         self.locker.unlock("test_lock")
         self.locker.lock("test_lock")
-        lock = self.client.feaas_test.vcl_lock.find_one()
+        lock = self.client.feaas_test.multi_locker.find_one()
         self.assertEqual("test_lock", lock["_id"])
         self.assertEqual(1, lock["state"])
 
     def test_double_lock(self):
         self.locker.init("test_lock")
-        self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_lock"})
+        self.addCleanup(self.client.feaas_test.multi_locker.remove, {"_id": "test_lock"})
         self.locker.lock("test_lock")
         t = threading.Thread(target=self.locker.lock, args=("test_lock",))
         t.start()
         time.sleep(.1)
         self.locker.unlock("test_lock")
         t.join()
-        lock = self.client.feaas_test.vcl_lock.find_one()
+        lock = self.client.feaas_test.multi_locker.find_one()
         self.assertEqual("test_lock", lock["_id"])
         self.assertEqual(1, lock["state"])
 
     def test_unlock(self):
         self.locker.init("test_unlock")
-        self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_unlock"})
+        self.addCleanup(self.client.feaas_test.multi_locker.remove, {"_id": "test_unlock"})
         self.locker.lock("test_unlock")
         self.locker.unlock("test_unlock")
-        lock = self.client.feaas_test.vcl_lock.find_one()
+        lock = self.client.feaas_test.multi_locker.find_one()
         self.assertEqual("test_unlock", lock["_id"])
         self.assertEqual(0, lock["state"])
 
     def test_double_unlock(self):
         self.locker.init("test_unlock")
-        self.addCleanup(self.client.feaas_test.vcl_lock.remove, {"_id": "test_unlock"})
+        self.addCleanup(self.client.feaas_test.multi_locker.remove, {"_id": "test_unlock"})
         self.locker.lock("test_unlock")
         self.locker.unlock("test_unlock")
         with self.assertRaises(storage.DoubleUnlockError):
