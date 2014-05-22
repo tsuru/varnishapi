@@ -140,7 +140,6 @@ class EC2Manager(object):
         instance = self.storage.retrieve_instance(name=name)
         for unit in instance.units:
             self._terminate_unit(unit)
-        self.storage.remove_instance(name=name)
 
     def _terminate_unit(self, unit):
         try:

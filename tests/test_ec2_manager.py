@@ -192,7 +192,6 @@ chmod +x /etc/cron.hourly/dump_vcls
         manager.terminate_instance("secret")
         conn.terminate_instances.assert_called_with(instance_ids=["i-0800"])
         storage.retrieve_instance.assert_called_with(name="secret")
-        storage.remove_instance.assert_called_with(name="secret")
 
     def test_terminate_instance_not_found(self):
         storage = mock.Mock()
