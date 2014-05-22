@@ -89,13 +89,16 @@ class MongoDBStorage(object):
         if instance.units:
             self.db.units.insert([u.to_dict() for u in instance.units])
 
-    def retrieve_instance(self, **query):
+    def retrieve_instance(self, check_liveness=False, **query):
         instance = self.db[self.collection_name].find_one(query)
         if not instance:
             raise InstanceNotFoundError()
         del instance["_id"]
-        return Instance(name=instance["name"],
-                        units=self.retrieve_units(instance_name=instance["name"]))
+        instance = Instance(**instance)
+        if check_liveness and instance.dying():
+            raise InstanceNotFoundError()
+        instance.units = self.retrieve_units(instance_name=instance.name)
+        return instance
 
     def retrieve_units(self, limit=None, **query):
         cursor = self.db.units.find(query)
@@ -161,11 +164,11 @@ class MultiLocker(object):
         n = 0
         while n < 1:
             r = self.db.multi_locker.update({"_id": lock_name, "state": 0},
-                                        {"_id": lock_name, "state": 1})
+                                            {"_id": lock_name, "state": 1})
             n = r["n"]
 
     def unlock(self, lock_name):
         r = self.db.multi_locker.update({"_id": lock_name, "state": 1},
-                                    {"_id": lock_name, "state": 0})
+                                        {"_id": lock_name, "state": 0})
         if r["n"] < 1:
             raise DoubleUnlockError(lock_name)

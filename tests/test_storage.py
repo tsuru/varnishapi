@@ -147,6 +147,13 @@ class MongoDBStorageTestCase(unittest.TestCase):
                          [u.to_dict() for u in got_instance.units])
         self.assertEqual(instance.to_dict(), got_instance.to_dict())
 
+    def test_retrieve_instance_check_liveness(self):
+        instance = storage.Instance(name="what", state="removed")
+        self.storage.store_instance(instance)
+        self.addCleanup(self.client.feaas_test.instances.remove, {"name": instance.name})
+        with self.assertRaises(storage.InstanceNotFoundError):
+            self.storage.retrieve_instance(name="what", check_liveness=True)
+
     def test_retrieve_instance_not_found(self):
         with self.assertRaises(storage.InstanceNotFoundError):
             self.storage.retrieve_instance(name="secret")
