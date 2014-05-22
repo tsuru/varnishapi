@@ -39,9 +39,6 @@ class Instance(object):
         unit.instance = self
         self.units.remove(unit)
 
-    def dying(self):
-        return self.state in ("removed", "terminating")
-
 
 class Unit(object):
 
