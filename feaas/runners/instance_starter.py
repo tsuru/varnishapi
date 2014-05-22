@@ -8,8 +8,8 @@ from feaas import runners, storage
 class InstanceStarter(runners.Base):
     lock_name = "instance_starter"
 
-    def __init__(self, manager, interval=10):
-        super(InstanceStarter, self).__init__(manager, interval)
+    def __init__(self, *args, **kwargs):
+        super(InstanceStarter, self).__init__(*args, **kwargs)
         self.init_locker(self.lock_name)
 
     def run(self):
