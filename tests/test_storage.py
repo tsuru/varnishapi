@@ -43,6 +43,22 @@ class InstanceTestCase(unittest.TestCase):
         instance.remove_unit(unit1)
         self.assertEqual([unit2], instance.units)
 
+    def test_dying_removed(self):
+        instance = storage.Instance(state="removed")
+        self.assertTrue(instance.dying())
+
+    def test_dying_terminating(self):
+        instance = storage.Instance(state="terminating")
+        self.assertTrue(instance.dying())
+
+    def test_dying_started(self):
+        instance = storage.Instance(state="started")
+        self.assertFalse(instance.dying())
+
+    def test_dying_unknown(self):
+        instance = storage.Instance(state="unknown")
+        self.assertFalse(instance.dying())
+
 
 class UnitTestCase(unittest.TestCase):
 
