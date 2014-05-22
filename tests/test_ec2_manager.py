@@ -165,6 +165,23 @@ chmod +x /etc/cron.hourly/dump_vcls
                                                    user_data=user_data)
 
     def test_remove_instance(self):
+        instance = api_storage.Instance(name="secret")
+        storage = mock.Mock()
+        storage.retrieve_instance.return_value = instance
+        manager = ec2.EC2Manager(storage)
+        manager.remove_instance("secret")
+        self.assertEqual("removed", instance.state)
+        storage.retrieve_instance.assert_called_with(name="secret")
+        storage.store_instance.assert_called_with(instance)
+
+    def test_remove_instance_not_found(self):
+        storage = mock.Mock()
+        storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
+        manager = ec2.EC2Manager(storage)
+        with self.assertRaises(api_storage.InstanceNotFoundError):
+            manager.remove_instance("secret")
+
+    def test_terminate_instance(self):
         conn = mock.Mock()
         storage = mock.Mock()
         unit = api_storage.Unit(id="i-0800")
@@ -172,13 +189,20 @@ chmod +x /etc/cron.hourly/dump_vcls
                                                                       units=[unit])
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
-        manager.remove_instance("someapp")
+        manager.terminate_instance("secret")
         conn.terminate_instances.assert_called_with(instance_ids=["i-0800"])
-        storage.retrieve_instance.assert_called_with(name="someapp")
-        storage.remove_instance.assert_called_with(name="someapp")
+        storage.retrieve_instance.assert_called_with(name="secret")
+        storage.remove_instance.assert_called_with(name="secret")
+
+    def test_terminate_instance_not_found(self):
+        storage = mock.Mock()
+        storage.retrieve_instance.side_effect = api_storage.InstanceNotFoundError()
+        manager = ec2.EC2Manager(storage)
+        with self.assertRaises(api_storage.InstanceNotFoundError):
+            manager.terminate_instance("secret")
 
     @mock.patch("sys.stderr")
-    def test_remove_instance_ec2_failure(self, stderr_mock):
+    def test_terminate_instance_ec2_failure(self, stderr_mock):
         conn = mock.Mock()
         conn.terminate_instances.side_effect = ValueError("Something went wrong")
         unit = api_storage.Unit(id="i-0800")
@@ -187,7 +211,7 @@ chmod +x /etc/cron.hourly/dump_vcls
                                                                       units=[unit])
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
-        manager.remove_instance("someapp")
+        manager.terminate_instance("someapp")
         msg = "[ERROR] Failed to terminate EC2 instance: Something went wrong"
         stderr_mock.write.assert_called_with(msg)
 
