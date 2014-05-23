@@ -94,7 +94,7 @@ class InstanceStarterTestCase(unittest.TestCase):
         starter.locker.lock.assert_called_with(starter.lock_name)
         manager.start_instance.assert_called_with(instance.name)
         starter.locker.unlock.assert_called_with(starter.lock_name)
-        strg.store_instance.assert_called_with(instance)
+        strg.store_instance.assert_called_with(instance, save_units=False)
 
     def test_start_instance_error(self):
         instance = storage.Instance(name="something")
@@ -107,4 +107,4 @@ class InstanceStarterTestCase(unittest.TestCase):
         self.assertEqual("error", instance.state)
         starter.locker.lock.assert_called_with(starter.lock_name)
         starter.locker.unlock.assert_called_with(starter.lock_name)
-        strg.store_instance.assert_called_with(instance)
+        strg.store_instance.assert_called_with(instance, save_units=False)

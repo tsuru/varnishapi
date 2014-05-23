@@ -37,6 +37,6 @@ class InstanceStarter(runners.Base):
                 instance.state = "created"
             except:
                 instance.state = "error"
-            self.storage.store_instance(instance)
+            self.storage.store_instance(instance, save_units=False)
         finally:
             self.locker.unlock(self.lock_name)
