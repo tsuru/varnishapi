@@ -113,6 +113,27 @@ class MongoDBStorage(object):
         self.db.units.remove({"instance_name": name})
         self.db[self.collection_name].remove({"name": name})
 
+    def store_scale_job(self, job):
+        if "state" not in job:
+            job["state"] = "pending"
+        self.db.scale_jobs.insert(job)
+
+    def get_scale_job(self):
+        job = self.db.scale_jobs.find_one({"state": "pending"})
+        if not job:
+            return
+        job["state"] = "processing"
+        self.db.scale_jobs.update({"_id": job["_id"]},
+                                  {"$set": {"state": job["state"]}})
+        return job
+
+    def finish_scale_job(self, job):
+        if "_id" not in job:
+            raise ValueError("job is not persisted")
+        job["state"] = "done"
+        self.db.scale_jobs.update({"_id": job["_id"]},
+                                  {"$set": {"state": job["state"]}})
+
     def store_bind(self, bind):
         self.db.binds.insert(bind.to_dict())
 

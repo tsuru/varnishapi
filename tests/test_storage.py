@@ -182,6 +182,61 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.storage.remove_instance(instance.name)
         self.assertIsNone(self.client.feaas_test.binds.find_one({"instance_name": instance.name}))
 
+    def test_store_scale_job(self):
+        job = {"instance": "myapp", "quantity": 2, "state": "done"}
+        self.storage.store_scale_job(job)
+        self.addCleanup(self.client.feaas_test.scale_jobs.remove, {"instance": "myapp"})
+        got_job = self.client.feaas_test.scale_jobs.find_one()
+        self.assertEqual(job, got_job)
+
+    def test_store_scale_job_no_state(self):
+        job = {"instance": "myapp", "quantity": 2}
+        self.storage.store_scale_job(job)
+        self.addCleanup(self.client.feaas_test.scale_jobs.remove, {"instance": "myapp"})
+        self.assertEqual("pending", job["state"])
+        got_job = self.client.feaas_test.scale_jobs.find_one()
+        self.assertEqual(job, got_job)
+
+    def test_get_scale_job(self):
+        job1 = {"instance": "myapp", "quantity": 2}
+        self.storage.store_scale_job(job1)
+        job2 = {"instance": "myapp", "quantity": 3}
+        self.storage.store_scale_job(job2)
+        self.addCleanup(self.client.feaas_test.scale_jobs.remove, {"instance": "myapp"})
+        got_job = self.storage.get_scale_job()
+        expected_job = self.client.feaas_test.scale_jobs.find_one()
+        self.assertEqual(expected_job, got_job)
+        self.assertEqual("processing", got_job["state"])
+
+    def test_get_scale_job_not_found(self):
+        job = self.storage.get_scale_job()
+        self.assertIsNone(job)
+
+    def test_get_scale_job_no_pending_job(self):
+        job1 = {"instance": "myapp", "quantity": 2, "state": "processing"}
+        self.storage.store_scale_job(job1)
+        job2 = {"instance": "myapp", "quantity": 2, "state": "done"}
+        self.storage.store_scale_job(job2)
+        self.addCleanup(self.client.feaas_test.scale_jobs.remove, {"instance": "myapp"})
+        job = self.storage.get_scale_job()
+        self.assertIsNone(job)
+
+    def test_finish_scale_job(self):
+        job = {"instance": "myapp", "quantity": 2, "state": "processing"}
+        self.storage.store_scale_job(job)
+        self.addCleanup(self.client.feaas_test.scale_jobs.remove, {"instance": "myapp"})
+        self.storage.finish_scale_job(job)
+        self.assertEqual("done", job["state"])
+        persisted_job = self.client.feaas_test.scale_jobs.find_one()
+        self.assertEqual(job, persisted_job)
+
+    def test_finish_scale_job_no_id(self):
+        job = {"instance": "myapp", "quantity": 2, "state": "processing"}
+        with self.assertRaises(ValueError) as cm:
+            self.storage.finish_scale_job(job)
+        exc = cm.exception
+        self.assertEqual(("job is not persisted",), exc.args)
+
     @freezegun.freeze_time("2014-02-16 12:00:01")
     def test_store_bind(self):
         instance = storage.Instance(name="years")
