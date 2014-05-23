@@ -65,7 +65,7 @@ class EC2Manager(object):
 
     def start_instance(self, name):
         instance = self.storage.retrieve_instance(name=name)
-        self.physical_scale(instance, 1)
+        self._add_units(instance, 1)
         return instance
 
     def _run_unit(self):

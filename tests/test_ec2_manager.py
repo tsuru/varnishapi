@@ -122,10 +122,10 @@ class EC2ManagerTestCase(unittest.TestCase):
         storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
-        manager.physical_scale = mock.Mock()
+        manager._add_units = mock.Mock()
         created_instance = manager.start_instance("myapp")
         self.assertEqual(instance, created_instance)
-        manager.physical_scale.assert_called_with(instance, 1)
+        manager._add_units.assert_called_with(instance, 1)
 
     def test_start_instance_not_found(self):
         storage = mock.Mock()
