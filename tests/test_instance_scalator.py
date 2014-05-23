@@ -140,7 +140,7 @@ class InstanceScalatorTestCase(unittest.TestCase):
         scalator.locker.init.assert_called_with(lock_name)
         scalator.locker.lock.assert_called_with(lock_name)
         manager.physical_scale.assert_called_with(instance, 2)
-        strg.store_instance.assert_called_with(instance)
+        strg.store_instance.assert_called_with(instance, save_units=False)
         scalator.locker.unlock.assert_called_with(lock_name)
 
     def test_scale_always_unlock_and_change_state(self):
@@ -158,5 +158,5 @@ class InstanceScalatorTestCase(unittest.TestCase):
         lock_name = "%s/something" % scalator.lock_name
         scalator.locker.init.assert_called_with(lock_name)
         scalator.locker.lock.assert_called_with(lock_name)
-        strg.store_instance.assert_called_with(instance)
+        strg.store_instance.assert_called_with(instance, save_units=False)
         scalator.locker.unlock.assert_called_with(lock_name)

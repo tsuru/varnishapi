@@ -50,6 +50,6 @@ class InstanceScalator(runners.Base):
                 self.manager.physical_scale(instance, quantity)
             finally:
                 instance.state = "started"
-                self.storage.store_instance(instance)
+                self.storage.store_instance(instance, save_units=False)
         finally:
             self.locker.unlock(lock_name)
