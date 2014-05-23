@@ -79,12 +79,13 @@ class MongoDBStorage(object):
         self.db = client[self.dbname]
         self.collection_name = "instances"
 
-    def store_instance(self, instance):
+    def store_instance(self, instance, save_units=True):
         self.db[self.collection_name].update({"name": instance.name}, instance.to_dict(),
                                              upsert=True)
-        self.db.units.remove({"instance_name": instance.name})
-        if instance.units:
-            self.db.units.insert([u.to_dict() for u in instance.units])
+        if save_units:
+            self.db.units.remove({"instance_name": instance.name})
+            if instance.units:
+                self.db.units.insert([u.to_dict() for u in instance.units])
 
     def retrieve_instance(self, check_liveness=False, **query):
         if check_liveness:

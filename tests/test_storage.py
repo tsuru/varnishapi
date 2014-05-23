@@ -118,6 +118,21 @@ class MongoDBStorageTestCase(unittest.TestCase):
         self.storage.store_instance(instance)
         self.assert_units(new_units, "secret")
 
+    def test_store_instance_update_without_units(self):
+        units = [storage.Unit(dns_name="instance1.cloud.tsuru.io", id="i-0800"),
+                 storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801"),
+                 storage.Unit(dns_name="instance3.cloud.tsuru.io", id="i-0802")]
+        instance = storage.Instance(name="secret", units=units)
+        self.storage.store_instance(instance)
+        self.addCleanup(self.client.feaas_test.instances.remove, {"name": "secret"})
+        self.addCleanup(self.client.feaas_test.units.remove, {"instance_name": "secret"})
+        instance.units = []
+        instance.state = "started"
+        self.storage.store_instance(instance, save_units=False)
+        self.assert_units(units, instance.name)
+        got_instance = self.storage.retrieve_instance(name=instance.name)
+        self.assertEqual("started", got_instance.state)
+
     def test_retrieve_instance(self):
         units = [storage.Unit(dns_name="instance1.cloud.tsuru.io", id="i-0800"),
                  storage.Unit(dns_name="instance2.cloud.tsuru.io", id="i-0801"),
