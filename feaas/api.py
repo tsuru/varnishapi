@@ -95,8 +95,11 @@ def scale_instance(name):
     manager = get_manager()
     try:
         manager.scale_instance(name, int(quantity))
-    except ValueError:
-        return "invalid quantity: %s" % quantity, 400
+    except ValueError as e:
+        msg = " ".join(e.args)
+        if "invalid literal" in msg:
+            return "invalid quantity: %s" % quantity, 400
+        return msg, 400
     except storage.InstanceNotFoundError:
         return "Instance not found", 404
     return "", 201
