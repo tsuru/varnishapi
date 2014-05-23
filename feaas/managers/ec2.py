@@ -65,7 +65,7 @@ class EC2Manager(object):
 
     def start_instance(self, name):
         instance = self.storage.retrieve_instance(name=name)
-        self._scale(instance, 1)
+        self.physical_scale(instance, 1)
         return instance
 
     def _run_unit(self):
@@ -164,12 +164,15 @@ class EC2Manager(object):
         if quantity < 1:
             raise ValueError("quantity must be a positive integer")
         instance = self.storage.retrieve_instance(name=name)
-        return self._scale(instance, quantity)
-
-    def _scale(self, instance, quantity):
-        new_units = quantity - len(instance.units)
-        if new_units == 0:
+        if instance.state == "scaling":
+            raise ValueError("instance is already scaling")
+        if quantity == len(instance.units):
             raise ValueError("instance already have %d units" % quantity)
+        self.storage.store_scale_job({"instance": name, "quantity": quantity,
+                                      "state": "pending"})
+
+    def physical_scale(self, instance, quantity):
+        new_units = quantity - len(instance.units)
         if new_units < 0:
             return self._remove_units(instance, -1 * new_units)
         return self._add_units(instance, new_units)

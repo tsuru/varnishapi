@@ -122,10 +122,10 @@ class EC2ManagerTestCase(unittest.TestCase):
         storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
-        manager._scale = mock.Mock()
+        manager.physical_scale = mock.Mock()
         created_instance = manager.start_instance("myapp")
         self.assertEqual(instance, created_instance)
-        manager._scale.assert_called_with(instance, 1)
+        manager.physical_scale.assert_called_with(instance, 1)
 
     def test_start_instance_not_found(self):
         storage = mock.Mock()
@@ -379,37 +379,25 @@ chmod +x /etc/cron.hourly/dump_vcls
         with self.assertRaises(api_storage.InstanceNotFoundError):
             manager.status("secret")
 
-    def test_scale_instance_add_units(self):
-        instance = api_storage.Instance(name="secret",
-                                        units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
-                                                                id="i-0800")])
+    def test_scale_instance(self):
+        instance = api_storage.Instance(name="secret", state="started")
         storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
-        fake_run_unit, fake_data = self.get_fake_run_unit()
         manager = ec2.EC2Manager(storage)
-        manager._run_unit = fake_run_unit
-        units = manager.scale_instance("secret", 4)
-        self.assertEqual(fake_data["calls"], 3)
-        instance.units.extend(fake_data["units"])
-        storage.store_instance.assert_called_with(instance)
-        self.assertEqual(fake_data["units"], units)
+        manager.scale_instance("secret", 2)
+        storage.store_scale_job.assert_called_with({"instance": "secret",
+                                                    "quantity": 2,
+                                                    "state": "pending"})
 
-    def test_scale_instance_remove_units(self):
-        unit1 = api_storage.Unit(dns_name="secret1.cloud.tsuru.io", id="i-0800")
-        unit2 = api_storage.Unit(dns_name="secret2.cloud.tsuru.io", id="i-0801")
-        unit3 = api_storage.Unit(dns_name="secret3.cloud.tsuru.io", id="i-0802")
-        units = [unit1, unit2, unit3]
-        instance = api_storage.Instance(name="secret", units=units)
+    def test_scale_instance_already_scaling(self):
+        instance = api_storage.Instance(name="secret", state="scaling")
         storage = mock.Mock()
         storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
-        manager._terminate_unit = mock.Mock()
-        units = manager.scale_instance("secret", 1)
-        expected = [mock.call(unit1), mock.call(unit2)]
-        self.assertEqual(expected, manager._terminate_unit.call_args_list)
-        self.assertEqual([unit3], instance.units)
-        storage.store_instance.assert_called_with(instance)
-        self.assertEqual([unit1, unit2], units)
+        with self.assertRaises(ValueError) as cm:
+            manager.scale_instance("secret", 2)
+        exc = cm.exception
+        self.assertEqual(("instance is already scaling",), exc.args)
 
     def test_scale_instance_no_change(self):
         instance = api_storage.Instance(name="secret",
@@ -439,6 +427,36 @@ chmod +x /etc/cron.hourly/dump_vcls
             manager.scale_instance("myapp", 0)
         exc = cm.exception
         self.assertEqual(("quantity must be a positive integer",), exc.args)
+
+    def test_physical_scale_add_units(self):
+        instance = api_storage.Instance(name="secret",
+                                        units=[api_storage.Unit(dns_name="secret.cloud.tsuru.io",
+                                                                id="i-0800")])
+        fake_run_unit, fake_data = self.get_fake_run_unit()
+        storage = mock.Mock()
+        manager = ec2.EC2Manager(storage)
+        manager._run_unit = fake_run_unit
+        units = manager.physical_scale(instance, 4)
+        self.assertEqual(fake_data["calls"], 3)
+        instance.units.extend(fake_data["units"])
+        storage.store_instance.assert_called_with(instance)
+        self.assertEqual(fake_data["units"], units)
+
+    def test_physical_scale_remove_units(self):
+        unit1 = api_storage.Unit(dns_name="secret1.cloud.tsuru.io", id="i-0800")
+        unit2 = api_storage.Unit(dns_name="secret2.cloud.tsuru.io", id="i-0801")
+        unit3 = api_storage.Unit(dns_name="secret3.cloud.tsuru.io", id="i-0802")
+        units = [unit1, unit2, unit3]
+        instance = api_storage.Instance(name="secret", units=units)
+        storage = mock.Mock()
+        manager = ec2.EC2Manager(storage)
+        manager._terminate_unit = mock.Mock()
+        units = manager.physical_scale(instance, 1)
+        expected = [mock.call(unit1), mock.call(unit2)]
+        self.assertEqual(expected, manager._terminate_unit.call_args_list)
+        self.assertEqual([unit3], instance.units)
+        storage.store_instance.assert_called_with(instance)
+        self.assertEqual([unit1, unit2], units)
 
     def get_fake_reservation(self, instances):
         reservation = mock.Mock(instances=[])
