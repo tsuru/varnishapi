@@ -155,10 +155,7 @@ class EC2Manager(object):
 
     def status(self, name):
         instance = self.storage.retrieve_instance(name=name)
-        reservations = self.connection.get_all_instances(instance_ids=[instance.units[0].id])
-        if len(reservations) < 1 or len(reservations[0].instances) < 1:
-            raise storage.InstanceNotFoundError()
-        return reservations[0].instances[0].state
+        return instance.state
 
     def scale_instance(self, name, quantity):
         if quantity < 1:
