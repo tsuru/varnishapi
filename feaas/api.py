@@ -78,13 +78,13 @@ def info(name):
 
 @api.route("/resources/<name>/status", methods=["GET"])
 def status(name):
-    states = {"running": 204, "pending": 202}
+    states = {"started": 204, "pending": 202}
     manager = get_manager()
     try:
         status = manager.status(name)
     except storage.InstanceNotFoundError:
         return "Instance not found", 404
-    return "", states.get(status, 500)
+    return status, states.get(status, 500)
 
 
 @api.route("/resources/<name>/scale", methods=["POST"])

@@ -95,8 +95,8 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
 
-    def test_status_running(self):
-        self.manager.new_instance("someapp", state="running")
+    def test_status_started(self):
+        self.manager.new_instance("someapp", state="started")
         resp = self.api.get("/resources/someapp/status")
         self.assertEqual(204, resp.status_code)
 
