@@ -34,7 +34,7 @@ class InstanceStarter(runners.Base):
         try:
             try:
                 self.manager.start_instance(instance.name)
-                instance.state = "created"
+                instance.state = "started"
             except:
                 instance.state = "error"
             self.storage.store_instance(instance, save_units=False)

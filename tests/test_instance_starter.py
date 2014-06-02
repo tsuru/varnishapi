@@ -90,7 +90,7 @@ class InstanceStarterTestCase(unittest.TestCase):
         starter = instance_starter.InstanceStarter(manager, interval=3)
         starter.locker = mock.Mock()
         starter.start_instance(instance)
-        self.assertEqual("created", instance.state)
+        self.assertEqual("started", instance.state)
         starter.locker.lock.assert_called_with(starter.lock_name)
         manager.start_instance.assert_called_with(instance.name)
         starter.locker.unlock.assert_called_with(starter.lock_name)
