@@ -110,6 +110,11 @@ class APITestCase(unittest.TestCase):
         resp = self.api.get("/resources/someapp/status")
         self.assertEqual(500, resp.status_code)
 
+    def test_status_scaling(self):
+        self.manager.new_instance("someapp", state="scaling")
+        resp = self.api.get("/resources/someapp/status")
+        self.assertEqual(204, resp.status_code)
+
     def test_status_not_found(self):
         resp = self.api.get("/resources/someapp/status")
         self.assertEqual(404, resp.status_code)

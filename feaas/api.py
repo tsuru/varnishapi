@@ -78,7 +78,7 @@ def info(name):
 
 @api.route("/resources/<name>/status", methods=["GET"])
 def status(name):
-    states = {"started": 204, "pending": 202}
+    states = {"started": 204, "pending": 202, "scaling": 204}
     manager = get_manager()
     try:
         status = manager.status(name)
