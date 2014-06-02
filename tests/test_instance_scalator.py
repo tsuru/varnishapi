@@ -100,6 +100,7 @@ class InstanceScalatorTestCase(unittest.TestCase):
         scalator.locker.lock.assert_called_with(scalator.lock_name)
         strg.retrieve_instance.assert_called_with(name="something",
                                                   check_liveness=True)
+        strg.reset_scale_job.assert_called_with(job)
         scalator.locker.unlock.assert_called_with(scalator.lock_name)
 
     def test_get_job_instance_not_found(self):

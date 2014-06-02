@@ -31,6 +31,7 @@ class InstanceScalator(runners.Base):
             instance = self.storage.retrieve_instance(name=job["instance"],
                                                       check_liveness=True)
             if instance.state != "started":
+                self.storage.reset_scale_job(job)
                 return None, None
             instance.state = "scaling"
             self.storage.store_instance(instance)
