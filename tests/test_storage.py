@@ -236,6 +236,22 @@ class MongoDBStorageTestCase(unittest.TestCase):
         job = self.storage.get_scale_job()
         self.assertIsNone(job)
 
+    def test_reset_scale_job(self):
+        job = {"instance": "myapp", "quantity": 2, "state": "processing"}
+        self.storage.store_scale_job(job)
+        self.addCleanup(self.client.feaas_test.scale_jobs.remove, {"instance": "myapp"})
+        self.storage.reset_scale_job(job)
+        self.assertEqual("pending", job["state"])
+        persisted_job = self.client.feaas_test.scale_jobs.find_one()
+        self.assertEqual(job, persisted_job)
+
+    def test_reset_scale_job_no_id(self):
+        job = {"instance": "myapp", "quantity": 2, "state": "processing"}
+        with self.assertRaises(ValueError) as cm:
+            self.storage.reset_scale_job(job)
+        exc = cm.exception
+        self.assertEqual(("job is not persisted",), exc.args)
+
     def test_finish_scale_job(self):
         job = {"instance": "myapp", "quantity": 2, "state": "processing"}
         self.storage.store_scale_job(job)

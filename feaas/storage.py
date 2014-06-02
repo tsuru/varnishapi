@@ -128,6 +128,13 @@ class MongoDBStorage(object):
                                   {"$set": {"state": job["state"]}})
         return job
 
+    def reset_scale_job(self, job):
+        if "_id" not in job:
+            raise ValueError("job is not persisted")
+        job["state"] = "pending"
+        self.db.scale_jobs.update({"_id": job["_id"]},
+                                  {"$set": {"state": job["state"]}})
+
     def finish_scale_job(self, job):
         if "_id" not in job:
             raise ValueError("job is not persisted")
