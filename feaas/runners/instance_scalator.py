@@ -14,7 +14,7 @@ class InstanceScalator(runners.Base):
 
     def run(self):
         try:
-            job, instance = self.get_job()
+            instance, job = self.get_job()
             if not job:
                 return
             self.scale_instance(instance, job["quantity"])

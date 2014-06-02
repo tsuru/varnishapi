@@ -32,7 +32,7 @@ class InstanceScalatorTestCase(unittest.TestCase):
         job, instance = ({"instance": "something", "quantity": 2},
                          storage.Instance(name="something"))
         get_job = mock.Mock()
-        get_job.return_value = job, instance
+        get_job.return_value = instance, job
         strg = mock.Mock()
         manager = mock.Mock(storage=strg)
         scalator = instance_scalator.InstanceScalator(manager, interval=3)
