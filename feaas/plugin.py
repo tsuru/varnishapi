@@ -5,10 +5,9 @@
 # license that can be found in the LICENSE file.
 
 import argparse
-import urllib
+import os
+import urllib2
 import sys
-
-API_URL = "{{ API_URL }}"
 
 
 class CommandNotFoundError(Exception):
@@ -26,8 +25,8 @@ class CommandNotFoundError(Exception):
 
 def scale(args):
     instance, quantity = get_scale_args(args)
-    result = urllib.urlopen(get_url("/resources/{}/scale".format(instance)),
-                            data="quantity={}".format(quantity))
+    result = proxy_request(instance, "/resources/{}/scale".format(instance),
+                           body="quantity={}".format(quantity))
     if result.getcode() == 201:
         msg = "Instance successfully scaled to {} unit".format(quantity)
         if quantity > 1:
@@ -53,8 +52,24 @@ def get_scale_args(args):
     return parsed_args.instance, parsed_args.quantity
 
 
-def get_url(path):
-    return "{0}/{1}".format(API_URL.rstrip("/"), path.lstrip("/"))
+def get_env(name):
+    env = os.environ.get(name)
+    if not env:
+        sys.stderr.write("ERROR: missing {}\n".format(name))
+        sys.exit(2)
+    return env
+
+
+def proxy_request(instance_name, path, body=None):
+    target = get_env("TSURU_TARGET").rstrip("/")
+    token = get_env("TSURU_TOKEN")
+    url = "{}/services/proxy/{}?callback={}".format(target, instance_name,
+                                                    path)
+    request = urllib2.Request(url)
+    request.add_header("Authorization", "bearer " + token)
+    if body:
+        request.add_data(body)
+    return urllib2.urlopen(request)
 
 
 def get_command(name):

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+import os
 import unittest
 
 import mock
@@ -27,34 +28,63 @@ class CommandNotFoundErrorTestCase(unittest.TestCase):
 
 class TsuruPluginTestCase(unittest.TestCase):
 
-    def setUp(self):
-        plugin.API_URL = "http://something.cloud.tsuru.io"
+    def set_envs(self):
+        os.environ["TSURU_TARGET"] = self.target = "https://cloud.tsuru.io/"
+        os.environ["TSURU_TOKEN"] = self.token = "abc123"
 
-    @mock.patch("urllib.urlopen")
+    def delete_envs(self):
+        del os.environ["TSURU_TARGET"], os.environ["TSURU_TOKEN"]
+
+    @mock.patch("urllib2.urlopen")
+    @mock.patch("urllib2.Request")
     @mock.patch("sys.stdout")
-    def test_scale(self, stdout, urlopen):
+    def test_scale(self, stdout, Request, urlopen):
+        request = mock.Mock()
+        Request.return_value = request
+        self.set_envs()
+        self.addCleanup(self.delete_envs)
         result = mock.Mock()
         result.getcode.return_value = 201
         urlopen.return_value = result
         plugin.scale(["-i", "myinstance", "-n", "10"])
-        urlopen.assert_called_with(plugin.API_URL + "/resources/myinstance/scale",
-                                   data="quantity=10")
+        Request.assert_called_with(self.target +
+                                   "services/proxy/myinstance?" +
+                                   "callback=/resources/myinstance/scale")
+        request.add_header.assert_called_with("Authorization",
+                                              "bearer " + self.token)
+        request.add_data.assert_called_with("quantity=10")
+        urlopen.assert_called_with(request)
         stdout.write.assert_called_with("Instance successfully scaled to 10 units\n")
 
-    @mock.patch("urllib.urlopen")
+    @mock.patch("urllib2.urlopen")
+    @mock.patch("urllib2.Request")
     @mock.patch("sys.stdout")
-    def test_scale_singular(self, stdout, urlopen):
+    def test_scale_singular(self, stdout, Request, urlopen):
+        request = mock.Mock()
+        Request.return_value = request
+        self.set_envs()
+        self.addCleanup(self.delete_envs)
         result = mock.Mock()
         result.getcode.return_value = 201
         urlopen.return_value = result
         plugin.scale(["-i", "myinstance", "-n", "1"])
-        urlopen.assert_called_with(plugin.API_URL + "/resources/myinstance/scale",
-                                   data="quantity=1")
+        Request.assert_called_with(self.target +
+                                   "services/proxy/myinstance?" +
+                                   "callback=/resources/myinstance/scale")
+        request.add_header.assert_called_with("Authorization",
+                                              "bearer " + self.token)
+        request.add_data.assert_called_with("quantity=1")
+        urlopen.assert_called_with(request)
         stdout.write.assert_called_with("Instance successfully scaled to 1 unit\n")
 
-    @mock.patch("urllib.urlopen")
+    @mock.patch("urllib2.urlopen")
+    @mock.patch("urllib2.Request")
     @mock.patch("sys.stderr")
-    def test_scale_failure(self, stderr, urlopen):
+    def test_scale_failure(self, stderr, Request, urlopen):
+        request = mock.Mock()
+        Request.return_value = request
+        self.set_envs()
+        self.addCleanup(self.delete_envs)
         result = mock.Mock()
         result.getcode.return_value = 400
         result.read.return_value = "Invalid quantity"
@@ -63,9 +93,34 @@ class TsuruPluginTestCase(unittest.TestCase):
             plugin.scale(["-i", "myinstance", "-n", "10"])
         exc = cm.exception
         self.assertEqual(1, exc.code)
-        urlopen.assert_called_with(plugin.API_URL + "/resources/myinstance/scale",
-                                   data="quantity=10")
+        Request.assert_called_with(self.target +
+                                   "services/proxy/myinstance?" +
+                                   "callback=/resources/myinstance/scale")
+        request.add_header.assert_called_with("Authorization",
+                                              "bearer " + self.token)
+        request.add_data.assert_called_with("quantity=10")
+        urlopen.assert_called_with(request)
         stderr.write.assert_called_with("ERROR: Invalid quantity\n")
+
+    @mock.patch("sys.stderr")
+    def test_scale_no_target(self, stderr):
+        with self.assertRaises(SystemExit) as cm:
+            plugin.scale(["-i", "myinstance", "-n", "10"])
+        exc = cm.exception
+        self.assertEqual(2, exc.code)
+        stderr.write.assert_called_with("ERROR: missing TSURU_TARGET\n")
+
+    @mock.patch("sys.stderr")
+    def test_scale_no_token(self, stderr):
+        self.set_envs()
+        self.addCleanup(self.delete_envs)
+        del os.environ["TSURU_TOKEN"]
+        self.addCleanup(self.set_envs)
+        with self.assertRaises(SystemExit) as cm:
+            plugin.scale(["-i", "myinstance", "-n", "10"])
+        exc = cm.exception
+        self.assertEqual(2, exc.code)
+        stderr.write.assert_called_with("ERROR: missing TSURU_TOKEN\n")
 
     @mock.patch("sys.stderr")
     def test_scale_missing_instance(self, stderr):
@@ -93,26 +148,6 @@ class TsuruPluginTestCase(unittest.TestCase):
         self.assertEqual(2, exc.code)
         expected_msg = "quantity must be a positive integer\n"
         stderr.write.assert_called_with(expected_msg)
-
-    def test_get_url(self):
-        plugin.API_URL = "http://localhost:5353"
-        url = plugin.get_url("/something")
-        self.assertEqual("http://localhost:5353/something", url)
-
-    def test_get_url_trailing_slash(self):
-        plugin.API_URL = "http://localhost:5353/"
-        url = plugin.get_url("/something")
-        self.assertEqual("http://localhost:5353/something", url)
-
-    def test_get_url_multiple_trailing_slashes(self):
-        plugin.API_URL = "http://some.cloud.tsuru.io///"
-        url = plugin.get_url("/thing")
-        self.assertEqual("http://some.cloud.tsuru.io/thing", url)
-
-    def test_get_url_no_leading_slash_in_path(self):
-        plugin.API_URL = "http://some.cloud.tsuru.io///"
-        url = plugin.get_url("thing")
-        self.assertEqual("http://some.cloud.tsuru.io/thing", url)
 
     def test_get_command(self):
         cmd = plugin.get_command("scale")
