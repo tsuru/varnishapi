@@ -114,9 +114,7 @@ def scale_instance(name):
 
 @api.route("/plugin", methods=["GET"])
 def get_plugin():
-    source = inspect.getsource(plugin)
-    source = source.replace("{{ API_URL }}", os.environ.get("API_URL"))
-    return source, 200
+    return inspect.getsource(plugin)
 
 
 def register_manager(name, obj, override=False):

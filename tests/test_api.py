@@ -217,27 +217,13 @@ class APITestCase(unittest.TestCase):
         self.assertEqual("you do not have access to this resource", resp.data)
 
     def test_plugin(self):
-        os.environ["API_URL"] = "http://feaas-api.cloud.tsuru.io"
-
-        def clean():
-            del os.environ["API_URL"]
-        self.addCleanup(clean)
-        expected = inspect.getsource(plugin).replace("{{ API_URL }}",
-                                                     "http://feaas-api.cloud.tsuru.io")
+        expected = inspect.getsource(plugin)
         resp = self.api.get("/plugin")
         self.assertEqual(200, resp.status_code)
         self.assertEqual(expected, resp.data)
 
     def test_plugin_does_not_require_authentication(self):
-        self.set_auth_env("varnishapi", "varnish123")
-        self.addCleanup(self.delete_auth_env)
-        os.environ["API_URL"] = "http://feaas-api.cloud.tsuru.io"
-
-        def clean():
-            del os.environ["API_URL"]
-        self.addCleanup(clean)
-        expected = inspect.getsource(plugin).replace("{{ API_URL }}",
-                                                     "http://feaas-api.cloud.tsuru.io")
+        expected = inspect.getsource(plugin)
         resp = self.api.get("/plugin")
         self.assertEqual(200, resp.status_code)
         self.assertEqual(expected, resp.data)
