@@ -3,6 +3,7 @@ Varnish service API for tsuru PaaS
 
 .. image:: https://travis-ci.org/tsuru/varnishapi.png?branch=master
    :target: https://travis-ci.org/tsuru/varnishapi
+
 Deploying the API
 -----------------
 
@@ -13,7 +14,7 @@ First, let's create an app in tsuru, from the project root, execute the followin
 ::
 
     % tsuru app-create varnishapi python
-    % git remote add tsuru git@remote.sbrubles.com # the returned remote ;)
+    % git remote add tsuru git@remote.sbrubles.com
     % git push tsuru master
 
 The push will return an error telling you that you can't push code before the
