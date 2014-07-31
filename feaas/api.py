@@ -8,7 +8,7 @@ import os
 
 from flask import Flask, Response, request
 
-from . import plugin, storage
+from . import auth, plugin, storage
 from .managers import ec2
 
 api = Flask(__name__)
@@ -20,6 +20,7 @@ managers = {
 
 
 @api.route("/resources", methods=["POST"])
+@auth.required
 def add_instance():
     name = request.form.get("name")
     if not name:
@@ -30,6 +31,7 @@ def add_instance():
 
 
 @api.route("/resources/<name>", methods=["DELETE"])
+@auth.required
 def remove_instance(name):
     manager = get_manager()
     try:
@@ -40,6 +42,7 @@ def remove_instance(name):
 
 
 @api.route("/resources/<name>", methods=["POST"])
+@auth.required
 def bind(name):
     app_host = request.form.get("app-host")
     if not app_host:
@@ -54,6 +57,7 @@ def bind(name):
 
 
 @api.route("/resources/<name>/hostname/<host>", methods=["DELETE"])
+@auth.required
 def unbind(name, host):
     manager = get_manager()
     try:
@@ -64,6 +68,7 @@ def unbind(name, host):
 
 
 @api.route("/resources/<name>", methods=["GET"])
+@auth.required
 def info(name):
     manager = get_manager()
     try:
@@ -77,6 +82,7 @@ def info(name):
 
 
 @api.route("/resources/<name>/status", methods=["GET"])
+@auth.required
 def status(name):
     states = {"started": 204, "pending": 202, "scaling": 204}
     manager = get_manager()
@@ -88,6 +94,7 @@ def status(name):
 
 
 @api.route("/resources/<name>/scale", methods=["POST"])
+@auth.required
 def scale_instance(name):
     quantity = request.form.get("quantity")
     if not quantity:

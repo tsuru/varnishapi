@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+import base64
 import inspect
 import json
 import os
@@ -34,6 +35,15 @@ class APITestCase(unittest.TestCase):
         self.assertEqual("name is required", resp.data)
         self.assertEqual([], self.manager.instances)
 
+    def test_start_instance_unauthorized(self):
+        self.set_auth_env("varnishapi", "varnish123")
+        self.addCleanup(self.delete_auth_env)
+        resp = self.open_with_auth("/resources", method="POST",
+                                   data={"names": "someapp"},
+                                   user="varnishapi", password="wat")
+        self.assertEqual(401, resp.status_code)
+        self.assertEqual("you do not have access to this resource", resp.data)
+
     def test_remove_instance(self):
         self.manager.new_instance("someapp")
         resp = self.api.delete("/resources/someapp")
@@ -46,6 +56,14 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
         self.assertEqual([], self.manager.instances)
+
+    def test_remove_instance_unauthorized(self):
+        self.set_auth_env("varnishapi", "varnish123")
+        self.addCleanup(self.delete_auth_env)
+        resp = self.open_with_auth("/resources/someapp", method="DELETE",
+                                   user="varnishapi", password="wat")
+        self.assertEqual(401, resp.status_code)
+        self.assertEqual("you do not have access to this resource", resp.data)
 
     def test_bind(self):
         self.manager.new_instance("someapp")
@@ -69,6 +87,15 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
 
+    def test_bind_unauthorized(self):
+        self.set_auth_env("varnishapi", "varnish123")
+        self.addCleanup(self.delete_auth_env)
+        resp = self.open_with_auth("/resources/someapp", method="POST",
+                                   data={"app-host": "someapp.cloud.tsuru.io"},
+                                   user="varnishapi", password="wat")
+        self.assertEqual(401, resp.status_code)
+        self.assertEqual("you do not have access to this resource", resp.data)
+
     def test_unbind(self):
         self.manager.new_instance("someapp")
         self.manager.bind("someapp", "someapp.cloud.tsuru.io")
@@ -82,6 +109,15 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
 
+    def test_unbind_unauthorized(self):
+        self.set_auth_env("varnishapi", "varnish123")
+        self.addCleanup(self.delete_auth_env)
+        resp = self.open_with_auth("/resources/someapp/hostname/someapp.cloud.tsuru.io",
+                                   method="DELETE",
+                                   user="varnishapi", password="wat")
+        self.assertEqual(401, resp.status_code)
+        self.assertEqual("you do not have access to this resource", resp.data)
+
     def test_info(self):
         self.manager.new_instance("someapp")
         resp = self.api.get("/resources/someapp")
@@ -94,6 +130,14 @@ class APITestCase(unittest.TestCase):
         resp = self.api.get("/resources/someapp")
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
+
+    def test_info_unauthorized(self):
+        self.set_auth_env("varnishapi", "varnish123")
+        self.addCleanup(self.delete_auth_env)
+        resp = self.open_with_auth("/resources/someapp", method="GET",
+                                   user="varnishapi", password="wat")
+        self.assertEqual(401, resp.status_code)
+        self.assertEqual("you do not have access to this resource", resp.data)
 
     def test_status_started(self):
         self.manager.new_instance("someapp", state="started")
@@ -119,6 +163,14 @@ class APITestCase(unittest.TestCase):
         resp = self.api.get("/resources/someapp/status")
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
+
+    def test_status_unauthorized(self):
+        self.set_auth_env("varnishapi", "varnish123")
+        self.addCleanup(self.delete_auth_env)
+        resp = self.open_with_auth("/resources/someapp/status", method="GET",
+                                   user="varnishapi", password="wat")
+        self.assertEqual(401, resp.status_code)
+        self.assertEqual("you do not have access to this resource", resp.data)
 
     def test_scale_instance(self):
         self.manager.new_instance("someapp")
@@ -155,6 +207,15 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(404, resp.status_code)
         self.assertEqual("Instance not found", resp.data)
 
+    def test_scale_instance_unauthorized(self):
+        self.set_auth_env("varnishapi", "varnish123")
+        self.addCleanup(self.delete_auth_env)
+        resp = self.open_with_auth("/resources/someapp/scale", method="POST",
+                                   data={"quantity": "2"},
+                                   user="varnishapi", password="wat")
+        self.assertEqual(401, resp.status_code)
+        self.assertEqual("you do not have access to this resource", resp.data)
+
     def test_plugin(self):
         os.environ["API_URL"] = "http://feaas-api.cloud.tsuru.io"
 
@@ -166,6 +227,34 @@ class APITestCase(unittest.TestCase):
         resp = self.api.get("/plugin")
         self.assertEqual(200, resp.status_code)
         self.assertEqual(expected, resp.data)
+
+    def test_plugin_does_not_require_authentication(self):
+        self.set_auth_env("varnishapi", "varnish123")
+        self.addCleanup(self.delete_auth_env)
+        os.environ["API_URL"] = "http://feaas-api.cloud.tsuru.io"
+
+        def clean():
+            del os.environ["API_URL"]
+        self.addCleanup(clean)
+        expected = inspect.getsource(plugin).replace("{{ API_URL }}",
+                                                     "http://feaas-api.cloud.tsuru.io")
+        resp = self.api.get("/plugin")
+        self.assertEqual(200, resp.status_code)
+        self.assertEqual(expected, resp.data)
+
+    def open_with_auth(self, url, method, user, password, data=None, headers=None):
+        encoded = base64.b64encode(user + ":" + password)
+        if not headers:
+            headers = {}
+        headers["Authorization"] = "Basic " + encoded
+        return self.api.open(url, method=method, headers=headers, data=data)
+
+    def set_auth_env(self, user, password):
+        os.environ["API_USERNAME"] = user
+        os.environ["API_PASSWORD"] = password
+
+    def delete_auth_env(self):
+        del os.environ["API_USERNAME"], os.environ["API_PASSWORD"]
 
 
 class ManagerTestCase(unittest.TestCase):
