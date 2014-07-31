@@ -33,7 +33,7 @@ class AuthTestCase(unittest.TestCase):
 
     def get(self, url, user, password):
         encoded = base64.b64encode(user + ":" + password)
-        return self.client.open("/", method="GET",
+        return self.client.open(url, method="GET",
                                 headers={"Authorization": "Basic " + encoded})
 
     def test_authentication_required_no_auth_in_environment(self):
