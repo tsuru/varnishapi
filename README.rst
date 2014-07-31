@@ -89,6 +89,7 @@ application address, your yaml should look like this:
 ::
 
     id: varnish
+    password: some123
     endpoint:
       production: varnishapi-endpoint.com
 
