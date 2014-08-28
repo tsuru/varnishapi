@@ -24,5 +24,5 @@ setup(
     packages=find_packages(exclude=["docs", "tests", "samples"]),
     include_package_data=True,
     install_requires=["Flask==0.9", "boto==2.25.0", "pymongo==2.6.3",
-                      "python-varnish==0.2.1"],
+                      "python-varnish==0.2.1", "tsuru-hcaas==0.1.0"],
 )
