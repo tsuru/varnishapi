@@ -20,6 +20,7 @@ sub vcl_recv {
 }
 
 sub vcl_fetch {
+ 	unset beresp.http.Server;
 	if(beresp.http.X-Esi) {
 		set beresp.do_esi = true;
 		unset beresp.http.X-Esi;
