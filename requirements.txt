@@ -3,4 +3,3 @@ boto==2.25.0
 gunicorn==0.17.2
 pymongo==2.6.3
 python-varnish==0.2.1
-tsuru-hcaas==0.2.3
