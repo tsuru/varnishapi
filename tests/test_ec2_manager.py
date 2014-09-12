@@ -185,13 +185,14 @@ chmod +x /etc/cron.hourly/dump_vcls
         conn = mock.Mock()
         storage = mock.Mock()
         unit = api_storage.Unit(id="i-0800")
-        storage.retrieve_instance.return_value = api_storage.Instance(name="secret",
-                                                                      units=[unit])
+        instance = api_storage.Instance(name="secret", units=[unit])
+        storage.retrieve_instance.return_value = instance
         manager = ec2.EC2Manager(storage)
         manager._connection = conn
-        manager.terminate_instance("secret")
+        got_instance = manager.terminate_instance("secret")
         conn.terminate_instances.assert_called_with(instance_ids=["i-0800"])
         storage.retrieve_instance.assert_called_with(name="secret")
+        self.assertEqual(instance, got_instance)
 
     def test_terminate_instance_not_found(self):
         storage = mock.Mock()
