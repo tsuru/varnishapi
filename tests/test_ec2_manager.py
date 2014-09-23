@@ -271,6 +271,29 @@ chmod +x /etc/cron.hourly/dump_vcls
         varnish_handler.quit.assert_called()
 
     @mock.patch("varnish.VarnishHandler")
+    def test_write_vcl_ignores_106(self, VarnishHandler):
+        varnish_handler = mock.Mock()
+        exc = AssertionError("106 Already a VCL program named feaas")
+        varnish_handler.vcl_inline.side_effect = exc
+        VarnishHandler.return_value = varnish_handler
+        app_host, instance_ip = "yeah.cloud.tsuru.io", "10.2.1.2"
+        manager = ec2.EC2Manager(None)
+        manager.write_vcl(instance_ip, "abc-def", app_host)
+
+    @mock.patch("varnish.VarnishHandler")
+    def test_write_vcl_doesnt_swallow_exceptions_that_arent_106(self, VarnishHandler):
+        varnish_handler = mock.Mock()
+        exc = AssertionError("Something went wrong")
+        varnish_handler.vcl_inline.side_effect = exc
+        VarnishHandler.return_value = varnish_handler
+        app_host, instance_ip = "yeah.cloud.tsuru.io", "10.2.1.2"
+        manager = ec2.EC2Manager(None)
+        with self.assertRaises(AssertionError) as cm:
+            manager.write_vcl(instance_ip, "abc-def", app_host)
+        exc = cm.exception
+        self.assertEqual(("Something went wrong",), exc.args)
+
+    @mock.patch("varnish.VarnishHandler")
     def test_remove_vcl(self, VarnishHandler):
         varnish_handler = mock.Mock()
         VarnishHandler.return_value = varnish_handler

@@ -110,11 +110,16 @@ class EC2Manager(object):
 
     def write_vcl(self, instance_addr, secret, app_addr):
         vcl = self.vcl_template() % {"app_host": app_addr}
-        handler = varnish.VarnishHandler("{0}:6082".format(instance_addr),
-                                         secret=secret)
-        handler.vcl_inline("feaas", vcl.encode("iso-8859-1", "ignore"))
-        handler.vcl_use("feaas")
-        handler.quit()
+        try:
+            handler = varnish.VarnishHandler("{0}:6082".format(instance_addr),
+                                             secret=secret)
+            handler.vcl_inline("feaas", vcl.encode("iso-8859-1", "ignore"))
+            handler.vcl_use("feaas")
+            handler.quit()
+        except AssertionError as e:
+            if len(e.args) > 0 and "106 Already a VCL program named" in e.args[0]:
+                return
+            raise e
 
     def remove_vcl(self, instance_addr, secret):
         handler = varnish.VarnishHandler("{0}:6082".format(instance_addr),
