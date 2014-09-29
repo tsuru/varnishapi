@@ -7,6 +7,7 @@ import os
 import urlparse
 import uuid
 import sys
+from httplib2 import Http
 
 import varnish
 from feaas import storage
@@ -80,6 +81,11 @@ class EC2Manager(object):
                             secret=secret, state="creating")
 
     def _user_data(self, secret):
+        if "USER_DATA_URL" in os.environ:
+            url = os.environ.get("USER_DATA_URL")
+            h = Http()
+            (resp, user_data) = h.request(url)
+            return user_data.replace("VARNISH_SECRET_KEY", secret)
         user_data_lines = None
         packages = os.environ.get("API_PACKAGES")
         if packages:

@@ -63,6 +63,17 @@ variable. Users may specify both variables.
 
     % tsuru env-set AMI_ID=your-ami-id API_PACKAGES=varnish vim-nox
 
+You can also use a custom user-data url via ``USER_DATA_URL`` intead of
+``API_PACKAGES``. In this case, the return content body should contain
+``VARNISH_SECRET_KEY`` word which will be replaced by proper varnish
+secret on remote machine.
+
+.. highlight: bash
+
+::
+
+    % tsuru env-set AMI_ID=your-ami-id USER_DATA_URL=http://server/custom-user-data
+
 Users may also specify a subnet for running with VPC. You can specify the
 subnet ID via the ``SUBNET_ID`` environment variable.
 

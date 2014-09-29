@@ -135,12 +135,55 @@ class EC2ManagerTestCase(unittest.TestCase):
             manager.start_instance("myapp")
 
     @mock.patch("uuid.uuid4")
-    def test_start_instance_ec2(self, uuid4):
+    def test_start_instance_ec2_default_userdata(self, uuid4):
         uuid4.return_value = u"abacaxi"
         os.environ["API_PACKAGES"] = "varnish vim-nox"
 
         def recover():
             del os.environ["API_PACKAGES"]
+        self.addCleanup(recover)
+        conn = mock.Mock()
+        conn.run_instances.return_value = self.get_fake_reservation(
+            instances=[{"id": "i-800", "dns_name": "abcd.amazonaws.com"}],
+        )
+        manager = ec2.EC2Manager(None)
+        manager._connection = conn
+        manager._run_unit()
+        user_data = """apt-get update
+apt-get install -y varnish vim-nox
+sed -i -e 's/-T localhost:6082/-T :6082/' /etc/default/varnish
+sed -i -e 's/-a :6081/-a :8080/' /etc/default/varnish
+echo abacaxi > /etc/varnish/secret
+service varnish restart
+cat > /etc/cron.hourly/dump_vcls <<'END'
+{0}
+END
+chmod +x /etc/cron.hourly/dump_vcls
+""".format(open(ec2.DUMP_VCL_FILE).read())
+        conn.run_instances.assert_called_once_with(image_id=self.ami_id,
+                                                   subnet_id=self.subnet_id,
+                                                   user_data=user_data)
+
+    @mock.patch("httplib2.Http.request")
+    @mock.patch("uuid.uuid4")
+    def test_start_instance_ec2_custom_userdata(self, uuid4, request):
+        uuid4.return_value = u"abacaxi"
+        return_content = """apt-get update
+apt-get install -y varnish vim-nox
+sed -i -e 's/-T localhost:6082/-T :6082/' /etc/default/varnish
+sed -i -e 's/-a :6081/-a :8080/' /etc/default/varnish
+echo VARNISH_SECRET_KEY > /etc/varnish/secret
+service varnish restart
+cat > /etc/cron.hourly/dump_vcls <<'END'
+{0}
+END
+chmod +x /etc/cron.hourly/dump_vcls
+""".format(open(ec2.DUMP_VCL_FILE).read())
+        request.return_value = (200, return_content)
+        os.environ["USER_DATA_URL"] = "http://localhost/custom_user_data_script"
+
+        def recover():
+            del os.environ["USER_DATA_URL"]
         self.addCleanup(recover)
         conn = mock.Mock()
         conn.run_instances.return_value = self.get_fake_reservation(

@@ -3,3 +3,4 @@ boto==2.25.0
 gunicorn==0.17.2
 pymongo==2.6.3
 python-varnish==0.2.1
+httplib2==0.9
