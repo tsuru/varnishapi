@@ -6,12 +6,8 @@ import os
 import urlparse
 import uuid
 import sys
-from httplib2 import Http
 
 from feaas import managers, storage
-
-DUMP_VCL_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
-                                             "misc", "dump_vcls.bash"))
 
 
 class EC2Manager(managers.BaseManager):
@@ -64,26 +60,7 @@ class EC2Manager(managers.BaseManager):
                             secret=secret, state="creating")
 
     def _user_data(self, secret):
-        if "USER_DATA_URL" in os.environ:
-            url = os.environ.get("USER_DATA_URL")
-            h = Http()
-            (resp, user_data) = h.request(url)
-            return user_data.replace("VARNISH_SECRET_KEY", secret)
-        user_data_lines = None
-        packages = os.environ.get("API_PACKAGES")
-        if packages:
-            user_data_lines = ["apt-get update",
-                               "apt-get install -y {0}".format(packages),
-                               "sed -i -e 's/-T localhost:6082/-T :6082/' /etc/default/varnish",
-                               "sed -i -e 's/-a :6081/-a :8080/' /etc/default/varnish",
-                               "echo {0} > /etc/varnish/secret".format(secret),
-                               "service varnish restart",
-                               "cat > /etc/cron.hourly/dump_vcls <<'END'",
-                               open(DUMP_VCL_FILE).read(),
-                               "END",
-                               "chmod +x /etc/cron.hourly/dump_vcls"]
-        if user_data_lines:
-            return "\n".join(user_data_lines) + "\n"
+        return self.get_user_data(secret)
 
     def terminate_instance(self, name):
         instance = self.storage.retrieve_instance(name=name)

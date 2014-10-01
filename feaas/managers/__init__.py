@@ -3,6 +3,7 @@
 # license that can be found in the LICENSE file.
 
 import codecs
+import httplib2
 import os
 
 import varnish
@@ -10,6 +11,9 @@ from feaas import storage
 
 VCL_TEMPLATE_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
                                                  "misc", "default.vcl"))
+
+DUMP_VCL_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
+                                             "misc", "dump_vcls.bash"))
 
 
 class BaseManager(object):
@@ -94,6 +98,28 @@ class BaseManager(object):
             raise ValueError("instance already have %d units" % quantity)
         self.storage.store_scale_job({"instance": name, "quantity": quantity,
                                       "state": "pending"})
+
+    def get_user_data(self, secret):
+        if "USER_DATA_URL" in os.environ:
+            url = os.environ.get("USER_DATA_URL")
+            h = httplib2.Http()
+            _, user_data = h.request(url)
+            return user_data.replace("VARNISH_SECRET_KEY", secret)
+        user_data_lines = None
+        packages = os.environ.get("API_PACKAGES")
+        if packages:
+            user_data_lines = ["apt-get update",
+                               "apt-get install -y {0}".format(packages),
+                               "sed -i -e 's/-T localhost:6082/-T :6082/' /etc/default/varnish",
+                               "sed -i -e 's/-a :6081/-a :8080/' /etc/default/varnish",
+                               "echo {0} > /etc/varnish/secret".format(secret),
+                               "service varnish restart",
+                               "cat > /etc/cron.hourly/dump_vcls <<'END'",
+                               open(DUMP_VCL_FILE).read(),
+                               "END",
+                               "chmod +x /etc/cron.hourly/dump_vcls"]
+        if user_data_lines:
+            return "\n".join(user_data_lines) + "\n"
 
     def start_instance(self, name):
         raise NotImplementedError()

@@ -159,7 +159,7 @@ cat > /etc/cron.hourly/dump_vcls <<'END'
 {0}
 END
 chmod +x /etc/cron.hourly/dump_vcls
-""".format(open(ec2.DUMP_VCL_FILE).read())
+""".format(open(managers.DUMP_VCL_FILE).read())
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
                                                    user_data=user_data)
@@ -178,7 +178,7 @@ cat > /etc/cron.hourly/dump_vcls <<'END'
 {0}
 END
 chmod +x /etc/cron.hourly/dump_vcls
-""".format(open(ec2.DUMP_VCL_FILE).read())
+""".format(open(managers.DUMP_VCL_FILE).read())
         request.return_value = (200, return_content)
         os.environ["USER_DATA_URL"] = "http://localhost/custom_user_data_script"
 
@@ -202,7 +202,7 @@ cat > /etc/cron.hourly/dump_vcls <<'END'
 {0}
 END
 chmod +x /etc/cron.hourly/dump_vcls
-""".format(open(ec2.DUMP_VCL_FILE).read())
+""".format(open(managers.DUMP_VCL_FILE).read())
         conn.run_instances.assert_called_once_with(image_id=self.ami_id,
                                                    subnet_id=self.subnet_id,
                                                    user_data=user_data)
