@@ -8,15 +8,13 @@ import uuid
 import sys
 from httplib2 import Http
 
-from feaas import storage
-
-from . import BaseManager
+from feaas import managers, storage
 
 DUMP_VCL_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
                                              "misc", "dump_vcls.bash"))
 
 
-class EC2Manager(BaseManager):
+class EC2Manager(managers.BaseManager):
 
     def __init__(self, *args, **kwargs):
         super(EC2Manager, self).__init__(*args, **kwargs)
