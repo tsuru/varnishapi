@@ -7,7 +7,7 @@ import unittest
 
 import mock
 
-from feaas import storage as api_storage
+from feaas import managers, storage as api_storage
 from feaas.managers import ec2
 
 
@@ -293,7 +293,7 @@ chmod +x /etc/cron.hourly/dump_vcls
 
     def test_vcl_template(self):
         manager = ec2.EC2Manager(None)
-        with open(ec2.VCL_TEMPLATE_FILE) as f:
+        with open(managers.VCL_TEMPLATE_FILE) as f:
             content = f.read().replace("\n", " ").replace('"', r'\"')
             content = content.replace("\t", "")
             self.assertEqual('"%s"' % content.strip(),
