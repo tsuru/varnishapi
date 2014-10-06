@@ -9,13 +9,14 @@ import os
 from flask import Flask, Response, request
 
 from . import auth, plugin, storage
-from .managers import ec2
+from .managers import cloudstack, ec2
 
 api = Flask(__name__)
 api.debug = os.environ.get("API_DEBUG", "0") in ("True", "true", "1")
 
 managers = {
     "ec2": ec2.EC2Manager,
+    "cloudstack": cloudstack.CloudStackManager,
 }
 
 
