@@ -68,7 +68,7 @@ class CloudStackManager(managers.BaseManager):
             data["projectid"] = project_id
         network_id = os.environ.get("CLOUDSTACK_NETWORK_ID")
         if network_id:
-            data["networkid"] = network_id
+            data["networkids"] = network_id
         vm_job = self.client.deployVirtualMachine(data)
         max_tries = int(os.environ.get("CLOUDSTACK_MAX_TRIES", 100))
         vm = self._wait_for_unit(vm_job, max_tries, project_id)

@@ -112,7 +112,7 @@ class CloudStackManagerTestCase(unittest.TestCase):
         create_data = {"group": "feaas", "templateid": self.template_id,
                        "zoneid": self.zone_id,
                        "serviceofferingid": self.service_offering_id,
-                       "userdata": user_data, "networkid": self.network_id,
+                       "userdata": user_data, "networkids": self.network_id,
                        "projectid": self.project_id}
         client_mock.deployVirtualMachine.assert_called_with(create_data)
         actual_user_data = manager.get_user_data("uuid_val")
@@ -150,7 +150,7 @@ class CloudStackManagerTestCase(unittest.TestCase):
         create_data = {"group": "feaas", "templateid": self.template_id,
                        "zoneid": self.zone_id,
                        "serviceofferingid": self.service_offering_id,
-                       "userdata": user_data, "networkid": self.network_id}
+                       "userdata": user_data, "networkids": self.network_id}
         client_mock.deployVirtualMachine.assert_called_with(create_data)
         actual_user_data = manager.get_user_data("uuid_val")
         client_mock.encode_user_data.assert_called_with(actual_user_data)
@@ -278,7 +278,7 @@ class CloudStackManagerTestCase(unittest.TestCase):
         create_data = {"group": "feaas", "templateid": self.template_id,
                        "zoneid": self.zone_id,
                        "serviceofferingid": self.service_offering_id,
-                       "userdata": user_data, "networkid": self.network_id,
+                       "userdata": user_data, "networkids": self.network_id,
                        "projectid": self.project_id}
         client_mock.deployVirtualMachine.assert_called_with(create_data)
         actual_user_data = manager.get_user_data("uuid_val")
