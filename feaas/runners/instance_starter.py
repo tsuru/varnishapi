@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+import sys
+
 from feaas import runners, storage
 
 
@@ -35,8 +37,10 @@ class InstanceStarter(runners.Base):
             try:
                 self.manager.start_instance(instance.name)
                 instance.state = "started"
-            except:
+            except Exception as e:
                 instance.state = "error"
+                error_msg = " ".join(e.args)
+                sys.stderr.write("[ERROR] failed to start instance: {}".format(error_msg))
             self.storage.store_instance(instance, save_units=False)
         finally:
             self.locker.unlock(self.lock_name)
