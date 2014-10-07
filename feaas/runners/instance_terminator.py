@@ -33,6 +33,8 @@ class InstanceTerminator(runners.Base):
         self.locker.lock(self.lock_name)
         try:
             self.manager.terminate_instance(instance.name)
-            self.storage.remove_instance(instance.name)
         finally:
-            self.locker.unlock(self.lock_name)
+            try:
+                self.storage.remove_instance(instance.name)
+            finally:
+                self.locker.unlock(self.lock_name)
