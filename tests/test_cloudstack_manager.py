@@ -109,8 +109,8 @@ class CloudStackManagerTestCase(unittest.TestCase):
         self.assertEqual("10.0.0.1", unit.dns_name)
         self.assertEqual("creating", unit.state)
         strg_mock.retrieve_instance.assert_called_with(name="some_instance")
-        create_data = {"group": "feaas", "displayname": "feaas_some_instance",
-                       "templateid": self.template_id, "zoneid": self.zone_id,
+        create_data = {"group": "feaas", "templateid": self.template_id,
+                       "zoneid": self.zone_id,
                        "serviceofferingid": self.service_offering_id,
                        "userdata": user_data, "networkid": self.network_id,
                        "projectid": self.project_id}
@@ -147,8 +147,8 @@ class CloudStackManagerTestCase(unittest.TestCase):
         self.assertEqual("10.0.0.1", unit.dns_name)
         self.assertEqual("creating", unit.state)
         strg_mock.retrieve_instance.assert_called_with(name="some_instance")
-        create_data = {"group": "feaas", "displayname": "feaas_some_instance",
-                       "templateid": self.template_id, "zoneid": self.zone_id,
+        create_data = {"group": "feaas", "templateid": self.template_id,
+                       "zoneid": self.zone_id,
                        "serviceofferingid": self.service_offering_id,
                        "userdata": user_data, "networkid": self.network_id}
         client_mock.deployVirtualMachine.assert_called_with(create_data)
@@ -184,8 +184,8 @@ class CloudStackManagerTestCase(unittest.TestCase):
         self.assertEqual("10.0.0.1", unit.dns_name)
         self.assertEqual("creating", unit.state)
         strg_mock.retrieve_instance.assert_called_with(name="some_instance")
-        create_data = {"group": "feaas", "displayname": "feaas_some_instance",
-                       "templateid": self.template_id, "zoneid": self.zone_id,
+        create_data = {"group": "feaas", "templateid": self.template_id,
+                       "zoneid": self.zone_id,
                        "serviceofferingid": self.service_offering_id,
                        "userdata": user_data, "projectid": self.project_id}
         client_mock.deployVirtualMachine.assert_called_with(create_data)
@@ -275,8 +275,8 @@ class CloudStackManagerTestCase(unittest.TestCase):
         self.assertEqual(instance, unit.instance)
         self.assertEqual("10.0.0.5", unit.dns_name)
         self.assertEqual("creating", unit.state)
-        create_data = {"group": "feaas", "displayname": "feaas_some_instance",
-                       "templateid": self.template_id, "zoneid": self.zone_id,
+        create_data = {"group": "feaas", "templateid": self.template_id,
+                       "zoneid": self.zone_id,
                        "serviceofferingid": self.service_offering_id,
                        "userdata": user_data, "networkid": self.network_id,
                        "projectid": self.project_id}

@@ -58,7 +58,6 @@ class CloudStackManager(managers.BaseManager):
         group = os.environ.get("CLOUDSTACK_GROUP", "feaas")
         data = {
             "group": group,
-            "displayname": "{}_{}".format(group, instance.name),
             "templateid": self.get_env("CLOUDSTACK_TEMPLATE_ID"),
             "zoneid": self.get_env("CLOUDSTACK_ZONE_ID"),
             "serviceofferingid": self.get_env("CLOUDSTACK_SERVICE_OFFERING_ID"),
