@@ -40,7 +40,7 @@ class InstanceStarter(runners.Base):
             except Exception as e:
                 instance.state = "error"
                 error_msg = " ".join(e.args)
-                sys.stderr.write("[ERROR] failed to start instance: {}".format(error_msg))
+                sys.stderr.write("[ERROR] failed to start instance: {}\n".format(error_msg))
             self.storage.store_instance(instance, save_units=False)
         finally:
             self.locker.unlock(self.lock_name)

@@ -109,4 +109,4 @@ class InstanceStarterTestCase(unittest.TestCase):
         starter.locker.lock.assert_called_with(starter.lock_name)
         starter.locker.unlock.assert_called_with(starter.lock_name)
         strg.store_instance.assert_called_with(instance, save_units=False)
-        stderr.write.assert_called_with("[ERROR] failed to start instance: something went wrong")
+        stderr.write.assert_called_with("[ERROR] failed to start instance: something went wrong\n")
