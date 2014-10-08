@@ -26,20 +26,20 @@ class CloudStackManagerTestCase(unittest.TestCase):
 
     def set_vm_envs(self, template_id="abc123", zone_id="zone1",
                     service_offering_id="qwe123", project_id=None,
-                    network_id=None):
+                    network_ids=None):
         os.environ["CLOUDSTACK_TEMPLATE_ID"] = self.template_id = template_id
         self.service_offering_id = service_offering_id
         os.environ["CLOUDSTACK_SERVICE_OFFERING_ID"] = self.service_offering_id
         os.environ["CLOUDSTACK_ZONE_ID"] = self.zone_id = zone_id
         if project_id:
             os.environ["CLOUDSTACK_PROJECT_ID"] = self.project_id = project_id
-        if network_id:
-            os.environ["CLOUDSTACK_NETWORK_ID"] = self.network_id = network_id
+        if network_ids:
+            os.environ["CLOUDSTACK_NETWORK_IDS"] = self.network_ids = network_ids
 
     def del_vm_envs(self):
         self._remove_envs("CLOUDSTACK_TEMPLATE_ID", "CLOUDSTACK_SERVICE_OFFERING_ID",
                           "CLOUDSTACK_ZONE_ID", "CLOUDSTACK_PROJECT_ID",
-                          "CLOUDSTACK_NETWORK_ID")
+                          "CLOUDSTACK_NETWORK_IDS")
 
     def _remove_envs(self, *envs):
         for env in envs:
@@ -84,7 +84,7 @@ class CloudStackManagerTestCase(unittest.TestCase):
     def test_start_instance(self, uuid):
         self.set_api_envs()
         self.addCleanup(self.del_api_envs)
-        self.set_vm_envs(project_id="project-123", network_id="net-123")
+        self.set_vm_envs(project_id="project-123", network_ids="net-123")
         self.addCleanup(self.del_vm_envs)
         uuid.return_value = "uuid_val"
         instance = storage.Instance(name="some_instance", units=[])
@@ -112,7 +112,7 @@ class CloudStackManagerTestCase(unittest.TestCase):
         create_data = {"group": "feaas", "templateid": self.template_id,
                        "zoneid": self.zone_id,
                        "serviceofferingid": self.service_offering_id,
-                       "userdata": user_data, "networkids": self.network_id,
+                       "userdata": user_data, "networkids": self.network_ids,
                        "projectid": self.project_id}
         client_mock.deployVirtualMachine.assert_called_with(create_data)
         actual_user_data = manager.get_user_data("uuid_val")
@@ -122,7 +122,7 @@ class CloudStackManagerTestCase(unittest.TestCase):
     def test_start_instance_no_project_id(self, uuid):
         self.set_api_envs()
         self.addCleanup(self.del_api_envs)
-        self.set_vm_envs(network_id="net-123")
+        self.set_vm_envs(network_ids="net-123")
         self.addCleanup(self.del_vm_envs)
         uuid.return_value = "uuid_val"
         instance = storage.Instance(name="some_instance", units=[])
@@ -150,7 +150,7 @@ class CloudStackManagerTestCase(unittest.TestCase):
         create_data = {"group": "feaas", "templateid": self.template_id,
                        "zoneid": self.zone_id,
                        "serviceofferingid": self.service_offering_id,
-                       "userdata": user_data, "networkids": self.network_id}
+                       "userdata": user_data, "networkids": self.network_ids}
         client_mock.deployVirtualMachine.assert_called_with(create_data)
         actual_user_data = manager.get_user_data("uuid_val")
         client_mock.encode_user_data.assert_called_with(actual_user_data)
@@ -251,7 +251,7 @@ class CloudStackManagerTestCase(unittest.TestCase):
     def test_physical_scale_up(self, uuid):
         self.set_api_envs()
         self.addCleanup(self.del_api_envs)
-        self.set_vm_envs(project_id="project-123", network_id="net-123")
+        self.set_vm_envs(project_id="project-123", network_ids="net-123")
         self.addCleanup(self.del_vm_envs)
         uuid.return_value = "uuid_val"
         instance = storage.Instance(name="some_instance",
@@ -278,7 +278,7 @@ class CloudStackManagerTestCase(unittest.TestCase):
         create_data = {"group": "feaas", "templateid": self.template_id,
                        "zoneid": self.zone_id,
                        "serviceofferingid": self.service_offering_id,
-                       "userdata": user_data, "networkids": self.network_id,
+                       "userdata": user_data, "networkids": self.network_ids,
                        "projectid": self.project_id}
         client_mock.deployVirtualMachine.assert_called_with(create_data)
         actual_user_data = manager.get_user_data("uuid_val")
