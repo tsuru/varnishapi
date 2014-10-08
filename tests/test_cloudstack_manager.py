@@ -169,7 +169,7 @@ class CloudStackManagerTestCase(unittest.TestCase):
         client_mock.deployVirtualMachine.return_value = {"id": "abc123",
                                                          "jobid": "qwe321"}
         client_mock.queryAsyncJobResult.return_value = {"jobstatus": 1}
-        vm = {"id": "abc123", "nic": [{"ipaddress": "10.0.0.1"}]}
+        vm = {"id": "abc123", "nic": []}
         client_mock.listVirtualMachines.return_value = {"virtualmachine": [vm]}
         client_mock.encode_user_data.return_value = user_data = mock.Mock()
         manager = cloudstack.CloudStackManager(storage=strg_mock)
@@ -181,13 +181,97 @@ class CloudStackManagerTestCase(unittest.TestCase):
         self.assertEqual("abc123", unit.id)
         self.assertEqual("uuid_val", unit.secret)
         self.assertEqual(instance, unit.instance)
-        self.assertEqual("10.0.0.1", unit.dns_name)
+        self.assertEqual("", unit.dns_name)
         self.assertEqual("creating", unit.state)
         strg_mock.retrieve_instance.assert_called_with(name="some_instance")
         create_data = {"group": "feaas", "templateid": self.template_id,
                        "zoneid": self.zone_id,
                        "serviceofferingid": self.service_offering_id,
                        "userdata": user_data, "projectid": self.project_id}
+        client_mock.deployVirtualMachine.assert_called_with(create_data)
+        actual_user_data = manager.get_user_data("uuid_val")
+        client_mock.encode_user_data.assert_called_with(actual_user_data)
+
+    @mock.patch("uuid.uuid4")
+    def test_start_instance_public_network_name(self, uuid):
+        def cleanup():
+            del os.environ["CLOUDSTACK_PUBLIC_NETWORK_NAME"]
+        self.addCleanup(cleanup)
+        os.environ["CLOUDSTACK_PUBLIC_NETWORK_NAME"] = "NOPOWER"
+        self.set_api_envs()
+        self.addCleanup(self.del_api_envs)
+        self.set_vm_envs(project_id="project-123", network_ids="net-123")
+        self.addCleanup(self.del_vm_envs)
+        uuid.return_value = "uuid_val"
+        instance = storage.Instance(name="some_instance", units=[])
+        strg_mock = mock.Mock()
+        strg_mock.retrieve_instance.return_value = instance
+        client_mock = mock.Mock()
+        client_mock.deployVirtualMachine.return_value = {"id": "abc123",
+                                                         "jobid": "qwe321"}
+        client_mock.queryAsyncJobResult.return_value = {"jobstatus": 1}
+        vm = {"id": "abc123", "nic": [{"ipaddress": "10.0.0.1", "networkname": "POWERNET"},
+                                      {"ipaddress": "192.168.1.1", "networkname": "NOPOWER"},
+                                      {"ipaddress": "172.16.42.1", "networkname": "KPOWER"}]}
+        client_mock.listVirtualMachines.return_value = {"virtualmachine": [vm]}
+        client_mock.encode_user_data.return_value = user_data = mock.Mock()
+        manager = cloudstack.CloudStackManager(storage=strg_mock)
+        manager.client = client_mock
+        got_instance = manager.start_instance("some_instance")
+        self.assertEqual(instance, got_instance)
+        self.assertEqual(1, len(instance.units))
+        unit = instance.units[0]
+        self.assertEqual("abc123", unit.id)
+        self.assertEqual("uuid_val", unit.secret)
+        self.assertEqual(instance, unit.instance)
+        self.assertEqual("192.168.1.1", unit.dns_name)
+        self.assertEqual("creating", unit.state)
+        strg_mock.retrieve_instance.assert_called_with(name="some_instance")
+        create_data = {"group": "feaas", "templateid": self.template_id,
+                       "zoneid": self.zone_id,
+                       "serviceofferingid": self.service_offering_id,
+                       "userdata": user_data, "networkids": self.network_ids,
+                       "projectid": self.project_id}
+        client_mock.deployVirtualMachine.assert_called_with(create_data)
+        actual_user_data = manager.get_user_data("uuid_val")
+        client_mock.encode_user_data.assert_called_with(actual_user_data)
+
+    @mock.patch("uuid.uuid4")
+    def test_start_instance_multi_nic_no_network_name(self, uuid):
+        self.set_api_envs()
+        self.addCleanup(self.del_api_envs)
+        self.set_vm_envs(project_id="project-123", network_ids="net-123")
+        self.addCleanup(self.del_vm_envs)
+        uuid.return_value = "uuid_val"
+        instance = storage.Instance(name="some_instance", units=[])
+        strg_mock = mock.Mock()
+        strg_mock.retrieve_instance.return_value = instance
+        client_mock = mock.Mock()
+        client_mock.deployVirtualMachine.return_value = {"id": "abc123",
+                                                         "jobid": "qwe321"}
+        client_mock.queryAsyncJobResult.return_value = {"jobstatus": 1}
+        vm = {"id": "abc123", "nic": [{"ipaddress": "10.0.0.1", "networkname": "POWERNET"},
+                                      {"ipaddress": "192.168.1.1", "networkname": "NOPOWER"},
+                                      {"ipaddress": "172.16.42.1", "networkname": "KPOWER"}]}
+        client_mock.listVirtualMachines.return_value = {"virtualmachine": [vm]}
+        client_mock.encode_user_data.return_value = user_data = mock.Mock()
+        manager = cloudstack.CloudStackManager(storage=strg_mock)
+        manager.client = client_mock
+        got_instance = manager.start_instance("some_instance")
+        self.assertEqual(instance, got_instance)
+        self.assertEqual(1, len(instance.units))
+        unit = instance.units[0]
+        self.assertEqual("abc123", unit.id)
+        self.assertEqual("uuid_val", unit.secret)
+        self.assertEqual(instance, unit.instance)
+        self.assertEqual("172.16.42.1", unit.dns_name)
+        self.assertEqual("creating", unit.state)
+        strg_mock.retrieve_instance.assert_called_with(name="some_instance")
+        create_data = {"group": "feaas", "templateid": self.template_id,
+                       "zoneid": self.zone_id,
+                       "serviceofferingid": self.service_offering_id,
+                       "userdata": user_data, "networkids": self.network_ids,
+                       "projectid": self.project_id}
         client_mock.deployVirtualMachine.assert_called_with(create_data)
         actual_user_data = manager.get_user_data("uuid_val")
         client_mock.encode_user_data.assert_called_with(actual_user_data)

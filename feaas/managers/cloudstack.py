@@ -72,8 +72,20 @@ class CloudStackManager(managers.BaseManager):
         vm_job = self.client.deployVirtualMachine(data)
         max_tries = int(os.environ.get("CLOUDSTACK_MAX_TRIES", 100))
         vm = self._wait_for_unit(vm_job, max_tries, project_id)
-        return storage.Unit(id=vm["id"], dns_name=vm["nic"][-1]["ipaddress"],
+        return storage.Unit(id=vm["id"], dns_name=self._get_dns_name(vm),
                             state="creating", secret=secret)
+
+    def _get_dns_name(self, vm):
+        if not vm.get("nic"):
+            return ""
+        network_name = os.environ.get("CLOUDSTACK_PUBLIC_NETWORK_NAME")
+        dns_name = vm["nic"][-1]["ipaddress"]
+        if network_name:
+            for nic in vm["nic"]:
+                if nic["networkname"] == network_name:
+                    dns_name = nic["ipaddress"]
+                    break
+        return dns_name
 
     def _wait_for_unit(self, vm_job, max_tries, project_id):
         status = 0
