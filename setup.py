@@ -13,6 +13,7 @@ README = codecs.open('README.rst', encoding='utf-8').read()
 
 setup(
     name="tsuru-feaas",
+    url="https://github.com/tsuru/varnishapi",
     version=__version__,
     description="Frontend as-a-service API for Tsuru PaaS",
     long_description=README,
