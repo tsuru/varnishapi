@@ -17,4 +17,4 @@ coverage: test_deps
 	rm .coverage
 
 flake8:
-	flake8 --max-line-length=99 .
+	flake8 --ignore=E731 --max-line-length=99 .
