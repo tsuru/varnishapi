@@ -63,7 +63,7 @@ variable. Users may specify both variables.
 
     % tsuru env-set AMI_ID=your-ami-id API_PACKAGES=varnish vim-nox
 
-You can also use a custom user-data url via ``USER_DATA_URL`` intead of
+You can also use a custom user-data url via ``USER_DATA_URL`` instead of
 ``API_PACKAGES``. In this case, the return content body should contain
 ``VARNISH_SECRET_KEY`` word which will be replaced by proper varnish
 secret on remote machine.
@@ -105,7 +105,7 @@ application address, your yaml should look like this:
     endpoint:
       production: varnishapi-endpoint.com
 
-Now let's tell tsuru it needs to registrate a new service, from the project
+Now let's tell tsuru it needs to register a new service, from the project
 root run, using `crane
 <http://godoc.org/github.com/globocom/tsuru/cmd/crane>`_:
 
