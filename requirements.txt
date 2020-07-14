@@ -1,4 +1,4 @@
-Flask==0.9
+Flask==1.0
 boto==2.25.0
 gunicorn==0.17.2
 pymongo==2.6.3
